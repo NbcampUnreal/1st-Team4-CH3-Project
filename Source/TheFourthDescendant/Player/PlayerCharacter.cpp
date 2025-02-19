@@ -6,6 +6,7 @@
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
 
@@ -22,6 +23,12 @@ APlayerCharacter::APlayerCharacter()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraComponent->SetupAttachment(SpringArmComponent, USpringArmComponent::SocketName);
 	CameraComponent->bUsePawnControlRotation = false;
+
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+	
+	Status.WalkSpeed = 600.0f;
+	SprintSpeed = 1200.0f;
+	bIsSprinting = false;
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -46,9 +53,16 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 			{
 				EnhancedInput->BindAction(
 					PlayerController->JumpAction,
-					ETriggerEvent::Started,
+					ETriggerEvent::Triggered,
 					this,
-					&APlayerCharacter::StartJump
+					&APlayerCharacter::TriggerJump
+				);
+
+				EnhancedInput->BindAction(
+					PlayerController->JumpAction,
+					ETriggerEvent::Completed,
+					this,
+					&APlayerCharacter::StopJump
 				);
 			}
 
@@ -68,7 +82,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					PlayerController->SprintAction,
 					ETriggerEvent::Started,
 					this,
-					&APlayerCharacter::Sprint
+					&APlayerCharacter::ToggleSprint
 				);
 			}
 
@@ -88,7 +102,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					PlayerController->CrouchAction,
 					ETriggerEvent::Started,
 					this,
-					&APlayerCharacter::StartCrouch
+					&APlayerCharacter::ToggleCrouch
 				);
 			}
 
@@ -110,20 +124,14 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					this,
 					&APlayerCharacter::StartShoot
 				);
-			}
 
-			if (PlayerController->FireAction)
-			{
 				EnhancedInput->BindAction(
 					PlayerController->FireAction,
 					ETriggerEvent::Triggered,
 					this,
 					&APlayerCharacter::TriggerShoot
 				);
-			}
 
-			if (PlayerController->FireAction)
-			{
 				EnhancedInput->BindAction(
 					PlayerController->FireAction,
 					ETriggerEvent::Completed,
@@ -140,10 +148,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					this,
 					&APlayerCharacter::StartAim
 				);
-			}
 
-			if (PlayerController->AimAction)
-			{
 				EnhancedInput->BindAction(
 					PlayerController->AimAction,
 					ETriggerEvent::Completed,
@@ -165,54 +170,127 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
-void APlayerCharacter::Move(const FInputActionValue& Value)
+void APlayerCharacter::BeginPlay()
 {
+	Super::BeginPlay();
+
+	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 }
 
-void APlayerCharacter::StartJump(const FInputActionValue& Value)
+void APlayerCharacter::Move(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	const FVector2D MoveInput = Value.Get<FVector2D>();
+	const FRotator ControllerRotator = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
+
+	// World에서 Controller의 X축, Y축 방향
+	const FVector ForwardVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::X);
+	const FVector RightVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::Y);
+
+	if (!FMath::IsNearlyZero(MoveInput.X))
+	{
+		AddMovementInput(ForwardVector, MoveInput.X);
+		
+		// 전방으로 이동할 경우에만 Sprint 속도를 적용
+		if (MoveInput.X > 0 && bIsSprinting)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		}
+		else
+		{
+			GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+		}
+	}
+	if (!FMath::IsNearlyZero(MoveInput.Y))
+	{
+		AddMovementInput(RightVector, MoveInput.Y);
+	}
+}
+
+void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
+{
+	if (!Controller) return;
+
+	if (Value.Get<bool>())
+	{
+		Jump();
+	}
+}
+
+void APlayerCharacter::StopJump(const FInputActionValue& Value)
+{
+	if (!Controller) return;
+
+	if (Value.Get<bool>())
+	{
+		StopJumping();
+	}
 }
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	FVector2D LookInput = Value.Get<FVector2D>();
+	AddControllerYawInput(LookInput.X);
+	AddControllerPitchInput(LookInput.Y);
 }
 
-void APlayerCharacter::Sprint(const FInputActionValue& Value)
+void APlayerCharacter::ToggleSprint(const FInputActionValue& Value)
 {
+	bIsSprinting = !bIsSprinting;
 }
 
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("Dodge"));
 }
 
-void APlayerCharacter::StartCrouch(const FInputActionValue& Value)
+void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
 {
+	bIsCrouching = !bIsCrouching;
+	if (bIsCrouching)
+	{
+		Crouch();
+	}
+	else
+	{
+		UnCrouch();
+	}
 }
 
 void APlayerCharacter::Interaction(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("Interaction"));
 }
 
 void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("StartShoot"));
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("TriggerShoot"));
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("StopShoot"));
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("StartAim"));
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("StopAim"));
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Display, TEXT("Reload"));
 }

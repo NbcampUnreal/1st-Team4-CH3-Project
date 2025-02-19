@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputActionValue.h"
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "PlayerCharacter.generated.h"
 
@@ -17,6 +18,16 @@ public:
 	// Sets default values for this character's properties
 	APlayerCharacter();
 
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	float SprintSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	float CrouchSpeed;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bIsSprinting;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bIsCrouching;
+	
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -30,24 +41,31 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
-	/** IA_Move 바인딩 함수 */
+
+	virtual void BeginPlay() override;
+	
+	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
+	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.
+	 */
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
 	/** IA_Jump(Started) 바인딩 함수 */
 	UFUNCTION()
-	void StartJump(const FInputActionValue& Value);
+	void TriggerJump(const FInputActionValue& Value);
+	UFUNCTION()
+	void StopJump(const FInputActionValue& Value);
 	/** IA_Look(Triggered) 바인딩 함수 */
 	UFUNCTION()
 	void Look(const FInputActionValue& Value);
 	/** IA_Sprint(Started) 바인딩 함수 */
 	UFUNCTION()
-	void Sprint(const FInputActionValue& Value);
+	void ToggleSprint(const FInputActionValue& Value);
 	/** IA_Dodge(Started) 바인딩 함수 */
 	UFUNCTION()
 	void Dodge(const FInputActionValue& Value);
 	/** IA_Crouch(Started) 바인딩 함수 */
 	UFUNCTION()
-	void StartCrouch(const FInputActionValue& Value);
+	void ToggleCrouch(const FInputActionValue& Value);
 	/** IA_Interaction(Started) 바인딩 함수 */
 	UFUNCTION()
 	void Interaction(const FInputActionValue& Value);
@@ -70,3 +88,4 @@ protected:
 	UFUNCTION()
 	void Reload(const FInputActionValue& Value);
 };
+
