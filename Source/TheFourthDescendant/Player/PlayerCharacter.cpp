@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "VisualLogger/VisualLoggerAutomationTests.h"
 
 
 // Sets default values
@@ -325,10 +326,16 @@ void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = true;
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = false;
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)

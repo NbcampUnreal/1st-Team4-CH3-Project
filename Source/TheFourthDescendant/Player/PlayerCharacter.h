@@ -15,18 +15,24 @@ class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	APlayerCharacter();
 
 protected:
+	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float SprintSpeed;
+	/** 숙이기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float CrouchSpeed;
+	/** 캐릭터가 달리고 있는지 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsSprinting;
+	/** 캐릭터가 숙이고 있는 중인지 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsCrouching;
+	/** 캐릭터가 조준 중인지 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bIsAiming;
 	
 private:
 	/** TPS 카메라 컴포넌트 */
@@ -95,7 +101,7 @@ protected:
 	/** IA_Fire(Completed) 바인딩 함수 */
 	UFUNCTION()
 	void StopShoot(const FInputActionValue& Value);
-	/** IA_Aim(Started) 바인딩 함수 */
+	/** IA_Aim(Started, Completed) 바인딩 함수, IsAiming을 토글해서 Aim 애니메이션을 재생한다. */
 	UFUNCTION()
 	void StartAim(const FInputActionValue& Value);
 	/** IA_Aim(Completed) 바인딩 함수 */
