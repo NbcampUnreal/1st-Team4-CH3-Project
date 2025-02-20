@@ -32,9 +32,6 @@ void ARangedMonster::Attack()
 		Blackboard->SetValueAsBool(FName("IsReloading"), true);
 		return;
 	}
-
-	// 공격 가능한 상태로 전환
-	bCanAttack = true;
 	
 	// 총구 위치
 	FVector MuzzleLocation = SkeletalMesh->GetSocketLocation(FName("MuzzleSocket"));
@@ -50,15 +47,22 @@ void ARangedMonster::Attack()
 	// 총구와 플레이어 사이에 물체가 있는지 확인
 	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, PlayerLocation, ECC_Visibility, Params);
 	DrawDebugLine(GetWorld(), MuzzleLocation, PlayerLocation, FColor::Red, false, 1, 0, 1.0f);
-	--CurrentRangedAttackCount;
 	
 	if (bHit)
 	{
 		// 플레이어가 적중한 경우 데미지 로직 작성
 		if (HitResult.GetActor() == Player)
 		{
+			// 공격 가능한 상태로 전환
+			bCanAttack = true;
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "Attack : RangedMonster Shot to Player !");
 		}
+	}
+
+	// 공격한 상태라면 탄환 수 감소
+	if (bCanAttack)
+	{
+		--CurrentRangedAttackCount;
 	}
 }
 
