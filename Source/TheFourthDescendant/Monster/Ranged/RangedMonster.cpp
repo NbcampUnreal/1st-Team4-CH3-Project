@@ -2,6 +2,7 @@
 
 
 #include "RangedMonster.h"
+#include "NavigationSystem.h"
 
 ARangedMonster::ARangedMonster()
 {
@@ -64,6 +65,11 @@ void ARangedMonster::Attack()
 	{
 		--CurrentRangedAttackCount;
 	}
+}
+
+void ARangedMonster::Move()
+{
+	EnemyController->MoveToTargetActor(Player);
 }
 
 void ARangedMonster::ReloadCompleted()

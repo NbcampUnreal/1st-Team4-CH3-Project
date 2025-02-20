@@ -6,7 +6,9 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
+#include "TheFourthDescendant/AI/EnemyController/EnemyController.h"
 #include "Monster.generated.h"
+
 
 UCLASS()
 class THEFOURTHDESCENDANT_API AMonster : public ACharacterBase
@@ -30,15 +32,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bIsDead;
 	/** 공격할 대상 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Target")
 	APlayerCharacter* Player;
+	/** 빙의중인 AIController */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Target")
+	AEnemyController* EnemyController;
 	/** 변수 값 조정을 위한 블랙보드 컴포넌트 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Target")
 	UBlackboardComponent* Blackboard;
 
 public:
 	/** 공격 */
 	virtual void Attack();
+	/** 이동 */
+	virtual void Move();
 
 protected:
 	virtual void BeginPlay() override;

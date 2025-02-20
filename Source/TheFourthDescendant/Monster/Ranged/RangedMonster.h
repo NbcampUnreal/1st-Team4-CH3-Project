@@ -18,6 +18,7 @@ protected:
 	/** 원거리 공격 반복 횟수 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	int32 RangedAttackCount;
+	/** 현재 남은 공격 횟수 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Status")
 	int32 CurrentRangedAttackCount;
 	/** 장전 상태 여부 */
@@ -31,6 +32,8 @@ private:
 public:
 	/** 공격 함수 */
 	virtual void Attack() override;
+	/** 이동 함수 */
+	virtual void Move() override;
 
 	/** 장전 완료 로직 */
 	UFUNCTION(BlueprintCallable)

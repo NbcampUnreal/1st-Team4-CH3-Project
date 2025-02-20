@@ -2,9 +2,7 @@
 
 
 #include "Monster.h"
-
 #include "Kismet/GameplayStatics.h"
-#include "TheFourthDescendant/AI/EnemyController/EnemyController.h"
 
 AMonster::AMonster()
 {
@@ -28,7 +26,7 @@ void AMonster::BeginPlay()
 	}
 
 	// AIController 캐스팅
-	AEnemyController* EnemyController = Cast<AEnemyController>(GetController());
+	EnemyController = Cast<AEnemyController>(GetController());
 	if (EnemyController == nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Monster BeginPlay : AIController Casting Failed !");
@@ -36,9 +34,18 @@ void AMonster::BeginPlay()
 
 	// 블랙보드 할당
 	Blackboard = EnemyController->GetBlackboardComponent();
+	if (Blackboard == nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Monster BeginPlay : BlackBoard Casting Failed !");
+	}
 }
 
 
 void AMonster::Attack()
 {
+}
+
+void AMonster::Move()
+{
+	
 }
