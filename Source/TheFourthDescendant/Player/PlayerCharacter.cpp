@@ -244,7 +244,6 @@ void APlayerCharacter::ToggleSprint(const FInputActionValue& Value)
 
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("Dodge"));
 }
 
 void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
@@ -262,35 +261,28 @@ void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
 
 void APlayerCharacter::Interaction(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("Interaction"));
 }
 
 void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("StartShoot"));
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("TriggerShoot"));
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("StopShoot"));
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("StartAim"));
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("StopAim"));
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("Reload"));
 }
