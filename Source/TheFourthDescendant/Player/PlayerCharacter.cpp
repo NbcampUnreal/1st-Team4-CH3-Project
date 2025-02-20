@@ -48,6 +48,13 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					this,
 					&APlayerCharacter::Move
 				);
+
+				EnhancedInput->BindAction(
+					PlayerController->MoveAction,
+					ETriggerEvent::Completed,
+					this,
+					&APlayerCharacter::StopMove
+				);
 			}
 
 			if (PlayerController->JumpAction)
@@ -255,6 +262,13 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	{
 		AddMovementInput(RightVector, MoveInput.Y);
 	}
+
+	bUseControllerRotationYaw = true;
+}
+
+void APlayerCharacter::StopMove(const FInputActionValue& Value)
+{
+	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
@@ -329,6 +343,7 @@ void APlayerCharacter::StartAim(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsAiming = true;
+	bUseControllerRotationYaw = true;
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
@@ -336,6 +351,7 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsAiming = false;
+	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)

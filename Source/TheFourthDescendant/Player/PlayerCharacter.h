@@ -72,6 +72,9 @@ protected:
 	 */
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
+	/** IA_Move(Completed) 바인딩 함수 */
+	UFUNCTION()
+	void StopMove(const FInputActionValue& Value);
 	/** IA_Jump(Started) 바인딩 함수 */
 	UFUNCTION()
 	void TriggerJump(const FInputActionValue& Value);
