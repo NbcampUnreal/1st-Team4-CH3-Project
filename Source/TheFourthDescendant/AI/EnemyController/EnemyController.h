@@ -19,4 +19,4 @@ protected:
 public:
 	virtual void OnPossess(APawn* InPawn);
 	
-}
+};
