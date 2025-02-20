@@ -170,6 +170,54 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
+void APlayerCharacter::IncreaseHealth(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Health += Amount;
+	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+}
+
+void APlayerCharacter::DecreaseHealth(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Health -= Amount;
+	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+
+	// 사망 처리
+}
+
+void APlayerCharacter::IncreaseShield(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Shield += Amount;
+	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+}
+
+void APlayerCharacter::DecreaseShield(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Shield -= Amount;
+	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+}
+
+void APlayerCharacter::ApplyDamage(const int Amount)
+{
+	if (Amount <= 0) return;
+
+	Status.Shield -= Amount;
+	if (Status.Shield < 0)
+	{
+		Status.Health += Status.Shield;
+		Status.Shield = 0;
+	}
+
+	// 사망 처리
+}
+
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();

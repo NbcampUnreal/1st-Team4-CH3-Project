@@ -40,6 +40,23 @@ public:
 	/** Mapping Context에 따라 입력을 바인딩*/
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	/** Amount 만큼 체력을 증가 */
+	UFUNCTION(BlueprintCallable)
+	void IncreaseHealth(const int Amount);
+	/** Amount 만큼 체력을 감소, NewHealth = Health - Amount (Amount > 0) */
+	UFUNCTION(BlueprintCallable)
+	void DecreaseHealth(const int Amount);
+	/** Amount 만큼 실드량을 증가 */
+	UFUNCTION(BlueprintCallable)
+	void IncreaseShield(const int Amount);
+	/** Amount 만큼 실드량을 감소, NewShield = Shield - Amount (Amount > 0)
+	 * 실드량만을 감소시키며 초과 피해를 체력에 영향을 주고 싶을 경우는 ApplyDamage를 호출 */
+	UFUNCTION(BlueprintCallable)
+	void DecreaseShield(const int Amount);
+	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소 */
+	UFUNCTION(BlueprintCallable)
+	void ApplyDamage(const int Amount);
+	
 protected:
 
 	virtual void BeginPlay() override;
@@ -88,4 +105,3 @@ protected:
 	UFUNCTION()
 	void Reload(const FInputActionValue& Value);
 };
-
