@@ -51,6 +51,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	UInputAction* ReloadAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+	UPROPERTY()
+	UUserWidget *HUDWidget;
 protected:
 	/** InputLocalPlayerSubsystem에 MappingContext를 추가 */
 	virtual void BeginPlay() override;

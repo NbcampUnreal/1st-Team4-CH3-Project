@@ -14,6 +14,8 @@ AMonster::AMonster()
 	bIsDead = false;
 
 	Player = nullptr;
+
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AMonster::BeginPlay()
