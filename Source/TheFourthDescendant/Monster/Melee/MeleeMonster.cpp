@@ -37,7 +37,6 @@ void AMeleeMonster::Attack()
 		if (HitResult.GetActor() == Player)
 		{
 			// 공격
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "Attack : MeleeMonster Attack to Player !");
 			UGameplayStatics::ApplyDamage(Player, AttackPower, EnemyController, this, UDamageType::StaticClass());
 		}
 	}

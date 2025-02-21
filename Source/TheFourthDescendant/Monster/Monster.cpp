@@ -47,6 +47,8 @@ void AMonster::BeginPlay()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Monster BeginPlay : BlackBoard Casting Failed !");
 	}
+
+	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
 }
 
 float AMonster::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
