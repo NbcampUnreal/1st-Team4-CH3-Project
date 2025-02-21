@@ -2,10 +2,14 @@
 
 
 #include "RangedMonster.h"
+
+#include "EngineUtils.h"
 #include "TheFourthDescendant/Monster/Projectile/EnemyProjectile.h"
 
 ARangedMonster::ARangedMonster()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	RangedAttackCount = 0;
 	CurrentRangedAttackCount = 0;
 	bIsReloading = false;
@@ -19,7 +23,43 @@ void ARangedMonster::BeginPlay()
 	CurrentRangedAttackCount = RangedAttackCount;
 	// 소켓 추적용 메시 컴포넌트 초기화
 	SkeletalMesh = this->GetMesh();
+
+	// 부모 클래스에 해당하는 액터는 모두 무시
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		AActor* Actor = *It;
+		if (Actor->IsA(AMonster::StaticClass()))
+		{
+			Params.AddIgnoredActor(Actor);
+		}
+	}
 }
+
+void ARangedMonster::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsDead) return; // 사망 상태일시 return
+
+	if (!Player) return; // 플레이어가 없는 경우 예외 처리
+
+	const FVector CurrentLocation = GetActorLocation();
+	const FVector TargetLocation = Player->GetActorLocation();
+
+	// 타겟을 향한 방향 벡터
+	FVector Direction = (TargetLocation - CurrentLocation);
+	Direction.Z = 0; // Z축 변경 방지 (수평 회전만 수행)
+	const FRotator LookAtRotation = Direction.Rotation(); // 타겟을 바라보는 회전값
+
+	// 부드러운 회전
+	const float RotationSpeed = 5.0f; // 회전 속도 조절
+	const FRotator InterpRotation = FMath::RInterpTo(GetActorRotation(), LookAtRotation, DeltaTime, RotationSpeed);
+
+	// 회전 적용
+	SetActorRotation(InterpRotation);
+}
+
+
 
 
 void ARangedMonster::Attack()
@@ -39,10 +79,6 @@ void ARangedMonster::Attack()
 	const FVector PlayerLocation = Player->GetActorLocation();
 
 	FHitResult HitResult;
-	FCollisionQueryParams Params;
-
-	// 자기 자신은 무시
-	Params.AddIgnoredActor(this);
 
 	// 총구와 플레이어 사이에 물체가 있는지 확인
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, PlayerLocation, ECC_Visibility, Params);
