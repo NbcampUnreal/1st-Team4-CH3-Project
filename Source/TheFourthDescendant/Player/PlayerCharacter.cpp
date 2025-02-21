@@ -32,6 +32,8 @@ APlayerCharacter::APlayerCharacter()
 	Status.WalkSpeed = 600.0f;
 	SprintSpeed = 1200.0f;
 	bIsSprinting = false;
+
+	Tags.Add(TEXT("Player"));
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
