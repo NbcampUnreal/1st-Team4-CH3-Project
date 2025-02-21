@@ -33,7 +33,7 @@ public:
 	EPathFollowingRequestResult::Type MoveToTargetActor(const AActor* Target);
 	/** FVector로 MoveTo를 사용할 때 */
 	EPathFollowingRequestResult::Type MoveToTargetLocation(const FVector& TargetLocation);
-	
+	/** MoveTo 성공 시 실행할 함수 */
 	void OnMoveCompletedCallback(FAIRequestID RequestID, const FPathFollowingResult& Result);
 
 };
