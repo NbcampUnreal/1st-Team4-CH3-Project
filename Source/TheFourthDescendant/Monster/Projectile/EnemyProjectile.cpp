@@ -39,7 +39,6 @@ void AEnemyProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, U
 {
 	if ((OtherActor != nullptr) && (OtherActor != this))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, FString::Printf(TEXT("Projectile Hit! name : %s"), *OtherActor->GetName()));
 		if (OtherActor->ActorHasTag("Player"))
 		{
 			UGameplayStatics::ApplyDamage(OtherActor, ProjectileDamage, GetInstigatorController(), this, UDamageType::StaticClass());	

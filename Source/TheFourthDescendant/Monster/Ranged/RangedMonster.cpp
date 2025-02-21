@@ -27,7 +27,6 @@ void ARangedMonster::Attack()
 	// 잔탄이 0발 이하인 경우 return
 	if (CurrentRangedAttackCount <= 0)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "Attack : RangedMonster AttackCount is 0 !");
 		bCanAttack = false;
 		bIsReloading = true;
 		Blackboard->SetValueAsBool(FName("IsReloading"), true);
@@ -47,7 +46,9 @@ void ARangedMonster::Attack()
 
 	// 총구와 플레이어 사이에 물체가 있는지 확인
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, PlayerLocation, ECC_Visibility, Params);
-	DrawDebugLine(GetWorld(), MuzzleLocation, PlayerLocation, FColor::Red, false, 1, 0, 1.0f);
+
+	// LineTracing 추적 디버그용 
+	//DrawDebugLine(GetWorld(), MuzzleLocation, PlayerLocation, FColor::Red, false, 1, 0, 1.0f);
 	
 	if (bHit)
 	{
