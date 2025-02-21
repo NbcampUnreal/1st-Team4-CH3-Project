@@ -53,7 +53,6 @@ void AWeaponBase::Reload()
 
 void AWeaponBase::Attack()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Attack"));
 	if (CurrentAmmo <= 0)
 	{
 		StopShoot();
