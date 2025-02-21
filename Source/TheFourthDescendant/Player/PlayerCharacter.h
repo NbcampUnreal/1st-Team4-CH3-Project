@@ -62,10 +62,24 @@ public:
 	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소 */
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
+
+	/** 무기를 장착 */
+	void Equip(class AWeaponBase* Weapon);
 	
 protected:
-
 	virtual void BeginPlay() override;
+
+	/** 오른손 무기 소켓 이름 */
+	static const FName RWeaponSocketName;
+	/** 왼손 무기 소켓 이름 */
+	static const FName LWeaponSocketName;
+
+	/** 초기 소지 장비 클래스 */
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AWeaponBase> StartWeaponClass;
+	/** 현재 장착된 무기 */
+	UPROPERTY()
+	AWeaponBase* CurrentWeapon;
 	
 	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
 	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.

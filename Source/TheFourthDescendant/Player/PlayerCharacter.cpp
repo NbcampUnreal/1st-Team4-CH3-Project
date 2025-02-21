@@ -8,8 +8,10 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "VisualLogger/VisualLoggerAutomationTests.h"
+#include "TheFourthDescendant/Weapon/WeaponBase.h"
 
+const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
+const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -135,7 +137,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 				EnhancedInput->BindAction(
 					PlayerController->FireAction,
-					ETriggerEvent::Triggered,
+					ETriggerEvent::Started,
 					this,
 					&APlayerCharacter::TriggerShoot
 				);
@@ -226,11 +228,25 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	// 사망 처리
 }
 
+void APlayerCharacter::Equip(class AWeaponBase* Weapon)
+{
+	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+	CurrentWeapon = Weapon;
+	Weapon->SetOwner(this);
+}
+
+
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+
+	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass);
+	if (CurrentWeapon)
+	{
+		Equip(CurrentWeapon);
+	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -332,10 +348,25 @@ void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
+	bIsAiming = true;
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartShoot();
+	}
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = false;
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopShoot();
+	}
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
@@ -356,4 +387,10 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Reload();
+	}
 }
