@@ -15,18 +15,24 @@ class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	APlayerCharacter();
 
 protected:
+	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float SprintSpeed;
+	/** 숙이기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float CrouchSpeed;
+	/** 캐릭터가 달리고 있는지 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsSprinting;
+	/** 캐릭터가 숙이고 있는 중인지 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsCrouching;
+	/** 캐릭터가 조준 중인지 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bIsAiming;
 	
 private:
 	/** TPS 카메라 컴포넌트 */
@@ -40,15 +46,49 @@ public:
 	/** Mapping Context에 따라 입력을 바인딩*/
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-protected:
+	/** Amount 만큼 체력을 증가 */
+	UFUNCTION(BlueprintCallable)
+	void IncreaseHealth(const int Amount);
+	/** Amount 만큼 체력을 감소, NewHealth = Health - Amount (Amount > 0) */
+	UFUNCTION(BlueprintCallable)
+	void DecreaseHealth(const int Amount);
+	/** Amount 만큼 실드량을 증가 */
+	UFUNCTION(BlueprintCallable)
+	void IncreaseShield(const int Amount);
+	/** Amount 만큼 실드량을 감소, NewShield = Shield - Amount (Amount > 0)
+	 * 실드량만을 감소시키며 초과 피해를 체력에 영향을 주고 싶을 경우는 ApplyDamage를 호출 */
+	UFUNCTION(BlueprintCallable)
+	void DecreaseShield(const int Amount);
+	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소 */
+	UFUNCTION(BlueprintCallable)
+	void ApplyDamage(const int Amount);
 
+	/** 무기를 장착 */
+	void Equip(class AWeaponBase* Weapon);
+	
+protected:
 	virtual void BeginPlay() override;
+
+	/** 오른손 무기 소켓 이름 */
+	static const FName RWeaponSocketName;
+	/** 왼손 무기 소켓 이름 */
+	static const FName LWeaponSocketName;
+
+	/** 초기 소지 장비 클래스 */
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AWeaponBase> StartWeaponClass;
+	/** 현재 장착된 무기 */
+	UPROPERTY()
+	AWeaponBase* CurrentWeapon;
 	
 	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
 	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.
 	 */
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
+	/** IA_Move(Completed) 바인딩 함수 */
+	UFUNCTION()
+	void StopMove(const FInputActionValue& Value);
 	/** IA_Jump(Started) 바인딩 함수 */
 	UFUNCTION()
 	void TriggerJump(const FInputActionValue& Value);
@@ -78,7 +118,7 @@ protected:
 	/** IA_Fire(Completed) 바인딩 함수 */
 	UFUNCTION()
 	void StopShoot(const FInputActionValue& Value);
-	/** IA_Aim(Started) 바인딩 함수 */
+	/** IA_Aim(Started, Completed) 바인딩 함수, IsAiming을 토글해서 Aim 애니메이션을 재생한다. */
 	UFUNCTION()
 	void StartAim(const FInputActionValue& Value);
 	/** IA_Aim(Completed) 바인딩 함수 */
@@ -88,4 +128,3 @@ protected:
 	UFUNCTION()
 	void Reload(const FInputActionValue& Value);
 };
-
