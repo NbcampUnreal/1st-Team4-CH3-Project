@@ -15,6 +15,13 @@ public:
 	// Sets default values for this actor's properties
 	AWeaponBase();
 
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int, CurrentAmmo, int, TotalAmmo);
+	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
+	FOnAmmoChanged OnAmmoChanged;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
+	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
+	FOnShootTriggered OnShootTriggered;
+	
 protected:
 	FString GetFireSocketName() const { return FireSocketName; }
 	

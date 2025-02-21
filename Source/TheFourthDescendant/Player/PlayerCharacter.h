@@ -7,6 +7,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "PlayerCharacter.generated.h"
 
+class AWeaponBase;
 struct FInputActionValue;
 
 UCLASS()
@@ -17,7 +18,16 @@ class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
 public:
 	APlayerCharacter();
 
+public:
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthAndShieldChanged, int, Health, int, Shield);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnHealthAndShieldChanged OnHealthAndShieldChanged;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipWeapon, AWeaponBase*, Weapon);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnEquipWeapon OnEquipWeapon;
+	
 protected:
+	
 	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float SprintSpeed;
@@ -68,7 +78,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	/** 오른손 무기 소켓 이름 */
 	static const FName RWeaponSocketName;
 	/** 왼손 무기 소켓 이름 */

@@ -244,11 +244,25 @@ void APlayerCharacter::BeginPlay()
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 
-	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass);
+	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParameters);
 	if (CurrentWeapon)
 	{
 		Equip(CurrentWeapon);
 	}
+}
+
+float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
+{
+	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	if (Status.Health <= 0)
+	{
+		// 사망 처리
+	}
+	
+	return  Amount;
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
