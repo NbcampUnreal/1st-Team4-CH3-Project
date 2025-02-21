@@ -32,6 +32,14 @@ int32 ACharacterBase::GetMaxShield() const
 float ACharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	class AController* EventInstigator, AActor* DamageCauser)
 {
-	return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	Status.Shield -= ActualDamage;
+	if (Status.Shield < 0)
+	{
+		Status.Health += Status.Shield;
+		Status.Shield = 0;
+	}
+	return ActualDamage;
 }
 
