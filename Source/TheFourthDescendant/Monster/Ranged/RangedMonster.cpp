@@ -2,7 +2,7 @@
 
 
 #include "RangedMonster.h"
-#include "NavigationSystem.h"
+#include "TheFourthDescendant/Monster/Projectile/EnemyProjectile.h"
 
 ARangedMonster::ARangedMonster()
 {
@@ -35,9 +35,9 @@ void ARangedMonster::Attack()
 	}
 	
 	// 총구 위치
-	FVector MuzzleLocation = SkeletalMesh->GetSocketLocation(FName("MuzzleSocket"));
+	const FVector MuzzleLocation = SkeletalMesh->GetSocketLocation(FName("MuzzleSocket"));
 	// 플레이어 위치
-	FVector PlayerLocation = Player->GetActorLocation();
+	const FVector PlayerLocation = Player->GetActorLocation();
 
 	FHitResult HitResult;
 	FCollisionQueryParams Params;
@@ -46,7 +46,7 @@ void ARangedMonster::Attack()
 	Params.AddIgnoredActor(this);
 
 	// 총구와 플레이어 사이에 물체가 있는지 확인
-	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, PlayerLocation, ECC_Visibility, Params);
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, PlayerLocation, ECC_Visibility, Params);
 	DrawDebugLine(GetWorld(), MuzzleLocation, PlayerLocation, FColor::Red, false, 1, 0, 1.0f);
 	
 	if (bHit)
@@ -56,7 +56,6 @@ void ARangedMonster::Attack()
 		{
 			// 공격 가능한 상태로 전환
 			bCanAttack = true;
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "Attack : RangedMonster Shot to Player !");
 		}
 	}
 
@@ -64,6 +63,9 @@ void ARangedMonster::Attack()
 	if (bCanAttack)
 	{
 		--CurrentRangedAttackCount;
+		const FVector FireDirection = PlayerLocation - MuzzleLocation;
+		AEnemyProjectile* Projectile = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileClass, MuzzleLocation, FRotator::ZeroRotator);
+		Projectile->FireInDirection(FireDirection.GetSafeNormal());
 	}
 }
 

@@ -6,6 +6,8 @@
 #include "TheFourthDescendant/Monster/Monster.h"
 #include "RangedMonster.generated.h"
 
+class AEnemyProjectile;
+
 UCLASS()
 class THEFOURTHDESCENDANT_API ARangedMonster : public AMonster
 {
@@ -24,6 +26,9 @@ protected:
 	/** 장전 상태 여부 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bIsReloading;
+	/** 발사할 Projectile */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TSubclassOf<AEnemyProjectile> ProjectileClass;
 
 private:
 	/** 소켓을 추출할 몬스터 스켈레탈 메시 */
