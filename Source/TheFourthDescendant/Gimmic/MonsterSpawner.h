@@ -31,9 +31,11 @@ protected:
 	TArray<FVector> SpawnPoints;
 	/* 스폰시킬 몬스터 */
 	TArray<AMonster> SpawnEnemy;
-	/* 스폰시킬 근거리 몬스터 클래스 */
+	/* 스폰시킬 근거리 몬스터 클래스 */	
+	UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> MeleeMonsterClass;
 	/* 스폰시킬 원거리 몬스터 클래스 */
+    UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> RangedMonsterClass;
 private:
 

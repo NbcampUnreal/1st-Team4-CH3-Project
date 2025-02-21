@@ -23,6 +23,7 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType)
 	{
 		FVector SpawnLocation = GetActorLocation(); 
 		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
         
 		AMonster* NewMonster = nullptr;
 
@@ -32,6 +33,14 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType)
 			if (MeleeMonsterClass)
 			{
 				NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnLocation,FRotator::ZeroRotator, SpawnParams);
+				if (NewMonster && GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Melee Monster Spawned"));
+				}
+				else if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Failed to Spawn Melee Monster"));
+				}
 			}
 			break;
 
@@ -43,7 +52,7 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType)
 			break;
 
 		case EMonsterType::Boss:
-			if (nullptr)
+			if (false)
 			{
 				NewMonster = GetWorld()->SpawnActor<ARangedMonster>(nullptr, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
 			}
@@ -115,7 +124,7 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
 			break;
 
 		case EMonsterType::Boss:
-			if (nullptr)
+			if (false)
 			{
 				NewMonster = GetWorld()->SpawnActor<ARangedMonster>(nullptr, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
 			}
@@ -144,7 +153,35 @@ FVector AMonsterSpawner::GetRandomSpawnPoint()
 void AMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	SpawnMonsters(FirstWaveSpawnData);
+
+	Spawn(EMonsterType::Melee);
+
+	// 디버깅 로그 출력
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("BeginPlay Called"));
+	}
+
+	// 클래스 변수 확인 로그
+	if (MeleeMonsterClass)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("MeleeMonsterClass is set"));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("MeleeMonsterClass is NOT set"));
+	}
+
+	if (RangedMonsterClass)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("RangedMonsterClass is set"));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("RangedMonsterClass is NOT set"));
+	}
 }
 
 
