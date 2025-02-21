@@ -49,6 +49,19 @@ void AMonster::BeginPlay()
 	}
 }
 
+float AMonster::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (Status.Health <= 0)
+	{
+		OnDeath();
+	}
+
+	return ActualDamage;
+}
+
 
 void AMonster::Attack()
 {
@@ -57,4 +70,13 @@ void AMonster::Attack()
 void AMonster::Move()
 {
 	
+}
+
+void AMonster::OnDeath()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
+	Status.Health = 0;
+	SetActorEnableCollision(false);
+	bIsDead = true;
+	Blackboard->SetValueAsBool(FName("IsDead"), true);
 }
