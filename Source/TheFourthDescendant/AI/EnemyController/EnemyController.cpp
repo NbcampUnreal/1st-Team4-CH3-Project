@@ -50,7 +50,7 @@ void AEnemyController::OnMoveCompletedCallback(FAIRequestID RequestID, const FPa
 {
 	if (Result.Code == EPathFollowingResult::Success)
 	{
-		UE_LOG(LogTemp, Log, TEXT("AI Arrived!"));
+		bIsArrived = true;
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("AI Arrived!!"));
 	}
 }

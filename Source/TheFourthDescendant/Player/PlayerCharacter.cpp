@@ -8,7 +8,10 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "TheFourthDescendant/Weapon/WeaponBase.h"
 
+const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
+const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -46,6 +49,13 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					ETriggerEvent::Triggered,
 					this,
 					&APlayerCharacter::Move
+				);
+
+				EnhancedInput->BindAction(
+					PlayerController->MoveAction,
+					ETriggerEvent::Completed,
+					this,
+					&APlayerCharacter::StopMove
 				);
 			}
 
@@ -127,7 +137,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 				EnhancedInput->BindAction(
 					PlayerController->FireAction,
-					ETriggerEvent::Triggered,
+					ETriggerEvent::Started,
 					this,
 					&APlayerCharacter::TriggerShoot
 				);
@@ -170,11 +180,73 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
+void APlayerCharacter::IncreaseHealth(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Health += Amount;
+	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+}
+
+void APlayerCharacter::DecreaseHealth(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Health -= Amount;
+	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+
+	// 사망 처리
+}
+
+void APlayerCharacter::IncreaseShield(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Shield += Amount;
+	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+}
+
+void APlayerCharacter::DecreaseShield(const int Amount)
+{
+	if (Amount <= 0) return;
+	
+	Status.Shield -= Amount;
+	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+}
+
+void APlayerCharacter::ApplyDamage(const int Amount)
+{
+	if (Amount <= 0) return;
+
+	Status.Shield -= Amount;
+	if (Status.Shield < 0)
+	{
+		Status.Health += Status.Shield;
+		Status.Shield = 0;
+	}
+
+	// 사망 처리
+}
+
+void APlayerCharacter::Equip(class AWeaponBase* Weapon)
+{
+	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+	CurrentWeapon = Weapon;
+	Weapon->SetOwner(this);
+}
+
+
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+
+	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass);
+	if (CurrentWeapon)
+	{
+		Equip(CurrentWeapon);
+	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -206,6 +278,13 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	{
 		AddMovementInput(RightVector, MoveInput.Y);
 	}
+
+	bUseControllerRotationYaw = true;
+}
+
+void APlayerCharacter::StopMove(const FInputActionValue& Value)
+{
+	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
@@ -269,20 +348,49 @@ void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
+	bIsAiming = true;
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartShoot();
+	}
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = false;
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopShoot();
+	}
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = true;
+	bUseControllerRotationYaw = true;
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	bIsAiming = false;
+	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Reload();
+	}
 }
