@@ -251,6 +251,20 @@ void APlayerCharacter::BeginPlay()
 	}
 }
 
+float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+	class AController* EventInstigator, AActor* DamageCauser)
+{
+	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	if (Status.Health <= 0)
+	{
+		// 사망 처리
+	}
+	
+	return  Amount;
+}
+
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
