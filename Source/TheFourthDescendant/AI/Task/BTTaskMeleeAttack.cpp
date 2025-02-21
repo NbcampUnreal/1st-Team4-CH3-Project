@@ -21,8 +21,8 @@ EBTNodeResult::Type UBTTaskMeleeAttack::ExecuteTask(UBehaviorTreeComponent& Owne
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "ExecuteTask : Monster Casting Failed !");
 		return EBTNodeResult::Failed;
 	}
-	// 캐스팅에 성공할 경우 Monster의 Move 함수 호출
-	Monster->Attack();
+	// 캐스팅에 성공할 경우 Monster의 Attack 함수 호출
+	// ->Attack();
 
 	return EBTNodeResult::Succeeded;
 }

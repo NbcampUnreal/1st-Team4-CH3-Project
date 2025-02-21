@@ -22,7 +22,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="AI")
 	UBehaviorTree* BehaviorTree;
 	/** MoveTo의 AcceptanceRadius로 지정할 값 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Stat")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI")
 	float LimitRadius;
 
 	
