@@ -2,6 +2,8 @@
 
 
 #include "Monster.h"
+
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 AMonster::AMonster()
@@ -17,6 +19,13 @@ AMonster::AMonster()
 void AMonster::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 캐릭터 이동속도 초기화
+	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+
+	// 체력 및 쉴드 초기화
+	Status.Health = Status.MaxHealth;
+	Status.Shield = Status.MaxShield;
 
 	// 플레이어 캐스팅
 	Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(),0));
