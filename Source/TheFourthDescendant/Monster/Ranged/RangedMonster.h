@@ -33,6 +33,8 @@ protected:
 private:
 	/** 소켓을 추출할 몬스터 스켈레탈 메시 */
 	USkeletalMeshComponent* SkeletalMesh;
+	/** LineTracing 시 무시할 객체 */
+	FCollisionQueryParams Params;
 
 public:
 	/** 공격 함수 */
@@ -46,4 +48,5 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 };
