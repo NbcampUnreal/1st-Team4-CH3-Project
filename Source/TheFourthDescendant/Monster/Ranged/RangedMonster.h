@@ -18,20 +18,27 @@ protected:
 	/** 원거리 공격 반복 횟수 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	int32 RangedAttackCount;
-	/** OnMoveCompleted 함수가 불린 후에 true로 전환 */
+	/** 현재 남은 공격 횟수 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Status")
+	int32 CurrentRangedAttackCount;
+	/** 장전 상태 여부 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
-	bool bIsMoved;
-	/** 전진 상태 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
-	bool bIsMovingFront;
-	/** 왼쪽으로 움직임 상태 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
-	bool bIsMovingLeft;
-	/** 오른쪽으로 움직임 상태 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
-	bool bIsMovingRight;
-	/** 후진 상태 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
-	bool bIsMovingBack;
-	
+	bool bIsReloading;
+
+private:
+	/** 소켓을 추출할 몬스터 스켈레탈 메시 */
+	USkeletalMeshComponent* SkeletalMesh;
+
+public:
+	/** 공격 함수 */
+	virtual void Attack() override;
+	/** 이동 함수 */
+	virtual void Move() override;
+
+	/** 장전 완료 로직 */
+	UFUNCTION(BlueprintCallable)
+	void ReloadCompleted();
+
+protected:
+	virtual void BeginPlay() override;
 };
