@@ -10,6 +10,8 @@
 
 AMeleeMonster::AMeleeMonster()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	// 공격 범위 컴포넌트 생성
 	AttackRangeComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("AttackRangeComponent"));
 	AttackRangeComponent->SetupAttachment(RootComponent);
@@ -29,10 +31,44 @@ AMeleeMonster::AMeleeMonster()
 	AttackRangeComponent->OnComponentBeginOverlap.AddDynamic(this, &AMeleeMonster::OnAttackRangeOverlap);
 }
 
+
+
+void AMeleeMonster::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsDead) return;
+
+	if (bCanAttack && !bIsAttacked)
+	{
+		// 타겟과 나의 위치
+		const FVector CurrentPos = GetActorLocation();
+		const FVector TargetPos = Player->GetActorLocation();
+
+		// 방향 벡터 계산
+		const FVector Direction = (TargetPos - CurrentPos).GetSafeNormal();
+
+		// 회전 벡터 계산
+		const FRotator CurrentRotation = GetActorRotation();
+		const FRotator TargetRotation = FRotationMatrix::MakeFromX(Direction).Rotator();
+
+		// 회전 값 보간
+		const FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 5.0f);
+
+		// 회전 적용
+		SetActorRotation(NewRotation);
+	}
+}
+
+
+
 void AMeleeMonster::Attack()
 {
 	// 공격 로직이 한 번 실행됐을 경우 return
 	if (bIsAttacked) return;
+
+	// 점프 중일 경우 return
+	if (bIsJumpStarted || bIsJumping || bIsJumpEnded) return;
 	
 	bIsAttacked = true;
 
@@ -47,8 +83,12 @@ void AMeleeMonster::Attack()
 	AttackRangeComponent->SetCollisionEnabled(ECollisionEnabled::Type::QueryOnly);
 }
 
+
+
 void AMeleeMonster::Move()
 {
+	if (bIsJumpStarted || bIsJumping || bIsJumpEnded) return;
+	
 	if (EnemyController->bIsArrived)
 	{
 		bCanAttack = true;
@@ -57,6 +97,8 @@ void AMeleeMonster::Move()
 	}
 	EnemyController->MoveToTargetActor(Player);
 }
+
+
 
 void AMeleeMonster::AttackCompleted()
 {
@@ -69,8 +111,10 @@ void AMeleeMonster::AttackCompleted()
 	AttackRangeComponent->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 }
 
+
+
 void AMeleeMonster::OnAttackRangeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor && OtherActor->ActorHasTag("Player"))
 	{
