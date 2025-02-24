@@ -37,13 +37,29 @@ protected:
 	/* 스폰시킬 원거리 몬스터 클래스 */
     UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> RangedMonsterClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Default", meta = (MakeEditWidget))
+	FVector TestVector;
+
+	// 웨이브 1용 스폰 위치 배열
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
+	TArray<FTransform> FirstWaveTransformArray;
+
+	// 웨이브 3용 근거리 몬스터 스폰 위치 배열
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
+	TArray<FTransform> ThirdWaveMeleeTransformArray;
+
+	// 웨이브 3용 원거리 몬스터 스폰 위치 배열
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
+	TArray<FTransform> ThirdWaveRangedTransformArray;
+
+	
 private:
 
 public:	
-	void Spawn(EMonsterType MonsterType);
-	void SpawnMonsters(TArray<TTuple<EMonsterType, int32>> SpawnEnemy);
+	void Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform);
+	void SpawnMonsters(int32 LevelIndex);
 	void RandomSpawn(EMonsterType MonsterType);
-	void RandomSpawnMonsters(TArray<TTuple<EMonsterType, int32>> SpawnEnemy);
+	void RandomSpawnMonsters(TArray<TTuple<EMonsterType, int32>> SpawnEnemy, int32 LevelIndex);
 	FVector GetSpawnPoint();
 	FVector GetRandomSpawnPoint();
 	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
