@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Monster/Ranged/RangedMonster.h"
 
 
@@ -44,7 +45,18 @@ void AEnemyProjectile::OnOverlap(UPrimitiveComponent* OverlappedComp, AActor* Ot
 	{
 		if (OtherActor->ActorHasTag("Player"))
 		{
+			// 플레이어에게 데미지 적용
 			UGameplayStatics::ApplyDamage(OtherActor, ProjectileDamage, GetInstigatorController(), this, UDamageType::StaticClass());
+
+			// 게임 인스턴스 캐스팅
+			UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+			UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+			
+			// 게임 인스턴스에 플레이어에게 가한 데미지 최신화
+			MainGameInstance->AddReceivedDamageByEnemy(ProjectileDamage);
+
+			// 회피한 횟수 1 감소
+			MainGameInstance->SubtractEvasionAttackCount(1);
 		}
 	}
     

@@ -4,7 +4,10 @@
 #include "Monster.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameState.h"
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 
 AMonster::AMonster()
 {
@@ -79,8 +82,22 @@ void AMonster::Move()
 void AMonster::OnDeath()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
+
+	// 체력 0으로 초기화 및 콜리전 비활성화
 	Status.Health = 0;
 	SetActorEnableCollision(false);
+
+	// 사망 플래그 값으로 애니메이션 재생
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
+
+	// 죽인 적 수 반영
+	UGameInstance* GameInstance = GetGameInstance();
+	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+	MainGameInstance->AddKilledEnemyCount(1);
+
+	// GameState에서 Enemy 처치시 호출하는 콜백 함수
+	AGameStateBase* StateBase = UGameplayStatics::GetGameState(GetWorld());
+	AMainGameStateBase* MainState = Cast<AMainGameStateBase>(StateBase);
+	MainState->OnEnemyKilled();
 }
