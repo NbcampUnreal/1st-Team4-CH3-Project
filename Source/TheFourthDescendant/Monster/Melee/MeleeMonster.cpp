@@ -66,6 +66,9 @@ void AMeleeMonster::Attack()
 {
 	// 공격 로직이 한 번 실행됐을 경우 return
 	if (bIsAttacked) return;
+
+	// 점프 중일 경우 return
+	if (bIsJumpStarted || bIsJumping || bIsJumpEnded) return;
 	
 	bIsAttacked = true;
 
@@ -84,6 +87,8 @@ void AMeleeMonster::Attack()
 
 void AMeleeMonster::Move()
 {
+	if (bIsJumpStarted || bIsJumping || bIsJumpEnded) return;
+	
 	if (EnemyController->bIsArrived)
 	{
 		bCanAttack = true;
