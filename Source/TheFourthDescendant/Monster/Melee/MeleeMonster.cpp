@@ -37,6 +37,8 @@ void AMeleeMonster::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (bIsDead) return;
+
 	if (bCanAttack && !bIsAttacked)
 	{
 		// 타겟과 나의 위치
