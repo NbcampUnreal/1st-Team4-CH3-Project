@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "MainHUD.h"
 #include "PlayerStatusWidget.generated.h"
 
 UCLASS()
@@ -10,6 +11,8 @@ class THEFOURTHDESCENDANT_API UPlayerStatusWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+	friend class UMainHUD;
+	
 public:
 	virtual void NativeOnInitialized() override;
 
@@ -24,7 +27,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
 	float SPPercent;
 
-public:
+protected:
 	UFUNCTION(BlueprintCallable, Category = "Setting Bullet Infos | InMagazine")
 	void IncreaseBulletInMag();
 	UFUNCTION(BlueprintCallable, Category = "Setting Bullet Infos | InMagazine")
