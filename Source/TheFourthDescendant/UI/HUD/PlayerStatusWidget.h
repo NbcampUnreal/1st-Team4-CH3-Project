@@ -11,7 +11,7 @@ class THEFOURTHDESCENDANT_API UPlayerStatusWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void NativeOnInitialized() override;
+	virtual void NativeOnInitialized() override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bullet")

@@ -2,3 +2,8 @@
 
 
 #include "CrossHairWidget.h"
+
+void UCrossHairWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+}
