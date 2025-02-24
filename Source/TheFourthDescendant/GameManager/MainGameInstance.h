@@ -63,6 +63,7 @@ public:
 	void SubtractEvasionAttackCount(const int32 Amount);
 
 private:
+	/** 1초마다 플레이 타임 1초 증가 */
 	void AddPlayTimeOneSecond();
 	
 };

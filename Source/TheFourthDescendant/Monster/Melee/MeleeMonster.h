@@ -35,6 +35,8 @@ public:
 	void AttackCompleted();
 	
 protected:
+	virtual void Tick(float DeltaTime) override;
+	
 	/** 공격 범위에 플레이어가 있는지 확인 */
 	UFUNCTION()
 	void OnAttackRangeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
