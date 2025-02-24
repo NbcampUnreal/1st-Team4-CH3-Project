@@ -3,6 +3,7 @@
 
 #include "MonsterSpawner.h"
 
+#include "Kismet/KismetMathLibrary.h"
 #include "TheFourthDescendant/Monster/Melee/MeleeMonster.h"
 #include "TheFourthDescendant/Monster/Ranged/RangedMonster.h"
 
@@ -10,12 +11,14 @@ AMonsterSpawner::AMonsterSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 8));
+	FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 8));
 	
     SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 8));
 	
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 8));
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 8));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 7));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 6));
+
+    Levelindex = 0;
 }
 
 // (근접, 원거리) 스폰 위치에 몬스터 생성	
@@ -89,50 +92,88 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType, const FTransform& SpawnTra
     }
 }
 
-
-
-
-
-
-// (근접, 원거리) 몬스터 랜덤 위치 생성
 void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
 {
-	if (GetWorld())
-	{
-		FVector SpawnLocation = GetRandomSpawnPoint();
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    if (GetWorld())
+    {
+        FVector SpawnLocation;
+        bool bIsLocationValid = false;
+        int32 MaxAttempts = 100; // 반복 횟수 제한 설정
+        int32 Attempts = 0;
 
-		AMonster* NewMonster = nullptr;
+        while (!bIsLocationValid && Attempts < MaxAttempts)
+        {
+            // 랜덤 위치 선택
+            SpawnLocation = UKismetMathLibrary::RandomPointInBoundingBox(SpawnArea.GetCenter(), SpawnArea.GetExtent());
+            bIsLocationValid = true;
 
-		switch (MonsterType)
-		{
-		case EMonsterType::Melee:
-			if (MeleeMonsterClass)
-			{
-				NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-			}
-			break;
+            // 충돌 체크
+            TArray<FHitResult> HitResults;
+            FCollisionQueryParams QueryParams;
+            QueryParams.bTraceComplex = true;
+            QueryParams.bReturnPhysicalMaterial = false;
 
-		case EMonsterType::Ranged:
-			if (RangedMonsterClass)
-			{
-				NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-			}
-			break;
+            bool bHasCollision = GetWorld()->SweepMultiByChannel(
+                HitResults,
+                SpawnLocation,
+                SpawnLocation + FVector(0.1f, 0.1f, 0.1f),
+                FQuat::Identity,
+                ECC_Pawn,
+                FCollisionShape::MakeSphere(50.0f), // 충돌 범위 설정
+                QueryParams
+            );
 
-		case EMonsterType::Boss:
-			// Boss 몬스터 생성 로직이 있는 경우 여기에 추가
-				break;
-		}
+            if (bHasCollision)
+            {
+                bIsLocationValid = false;
+                if (GEngine)
+                {
+                    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Collision detected. Retrying..."));
+                }
+            }
 
-		if (NewMonster)
-		{
-			// 추가 설정 로직이 필요한 경우 여기에 작성합니다.
-		}
-	}
+            Attempts++;
+        }
+
+        if (bIsLocationValid)
+        {
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+            AMonster* NewMonster = nullptr;
+
+            switch (MonsterType)
+            {
+                case EMonsterType::Melee:
+                    if (MeleeMonsterClass)
+                    {
+                        NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+                    }
+                    break;
+
+                case EMonsterType::Ranged:
+                    if (RangedMonsterClass)
+                    {
+                        NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+                    }
+                    break;
+
+                case EMonsterType::Boss:
+                    // Boss 몬스터 생성 로직이 있는 경우 여기에 추가
+                    break;
+            }
+
+            if (NewMonster && GEngine)
+            {
+                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Monster Spawned Successfully"));
+            }
+        }
+        else if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Failed to find a valid spawn location after maximum attempts"));
+        }
+    }
 }
-
 
 void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
 {
@@ -254,24 +295,11 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
 
 
 
-
-
-
-FVector AMonsterSpawner::GetSpawnPoint()
-{
-	return GetActorLocation();
-}
-
-FVector AMonsterSpawner::GetRandomSpawnPoint()
-{
-	return FVector::ZeroVector;
-}
-
 void AMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SpawnMonsters(2);
+	SpawnMonsters(Levelindex);
 
 	// 디버깅 로그 출력
 	if (GEngine)
