@@ -5,6 +5,8 @@
 
 void UPlayerStatusWidget::NativeOnInitialized()
 {
+	Super::NativeOnInitialized();
+	
 	BulletInMag = 0;
 	TotalMagsBullet = 0;
 	HPPercent = 1.f;
