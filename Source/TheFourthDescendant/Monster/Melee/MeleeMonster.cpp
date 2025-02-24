@@ -5,7 +5,29 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 
+
+AMeleeMonster::AMeleeMonster()
+{
+	// 공격 범위 컴포넌트 생성
+	AttackRangeComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("AttackRangeComponent"));
+	AttackRangeComponent->SetupAttachment(RootComponent);
+
+	// 공격 범위 크기 및 위치 설정
+	AttackRangeComponent->InitCapsuleSize(90, 90);
+	AttackRangeComponent->SetRelativeLocation(FVector(120.0f, 0.0f, 0.0f));
+
+	// 충돌만 허용
+	AttackRangeComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	// 오버랩 채널로 설정
+	AttackRangeComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	AttackRangeComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+
+	// 오버랩 이벤트 바인딩
+	AttackRangeComponent->OnComponentBeginOverlap.AddDynamic(this, &AMeleeMonster::OnAttackRangeOverlap);
+}
 
 void AMeleeMonster::Attack()
 {
@@ -13,34 +35,16 @@ void AMeleeMonster::Attack()
 	if (bIsAttacked) return;
 	
 	bIsAttacked = true;
-	
-	FHitResult HitResult;
-	FCollisionQueryParams Params;
 
-	// 자기 자신은 무시
-	Params.AddIgnoredActor(this);
+	// 게임 인스턴스 캐스팅
+	UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
 
-	const FVector Start = GetActorLocation() + GetActorForwardVector() * GetCapsuleComponent()->GetScaledCapsuleRadius();
-	const FVector End = Start + GetActorForwardVector() * AttackRange;
-	bool HitDetected = GetWorld()->SweepSingleByChannel(
-		HitResult,
-		Start,
-		End,
-		FQuat::Identity,
-		ECollisionChannel::ECC_GameTraceChannel1,
-		FCollisionShape::MakeSphere(AttackRange),
-		Params
-		);
+	// 회피한 횟수 1 증가
+	MainGameInstance->AddEvasionAttackCount(1);
 
-	if (HitDetected)
-	{
-		if (HitResult.GetActor() == Player)
-		{
-			// 공격
-			UGameplayStatics::ApplyDamage(Player, AttackPower, EnemyController, this, UDamageType::StaticClass());
-		}
-	}
-	
+	// 공격 후 콜리전 비활성화
+	AttackRangeComponent->SetCollisionEnabled(ECollisionEnabled::Type::QueryOnly);
 }
 
 void AMeleeMonster::Move()
@@ -60,4 +64,29 @@ void AMeleeMonster::AttackCompleted()
 	bIsAttacked = false;
 	Blackboard->SetValueAsBool(FName("IsAttacking"), false);
 	EnemyController->bIsArrived = false;
+
+	// 공격 후 콜리전 비활성화
+	AttackRangeComponent->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+}
+
+void AMeleeMonster::OnAttackRangeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor && OtherActor->ActorHasTag("Player"))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Enemy Attacked !")));
+
+		// 게임 인스턴스 캐스팅
+		UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+		UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+		
+		// 게임 인스턴스에 플레이어에게 가한 데미지 최신화
+		MainGameInstance->AddReceivedDamageByEnemy(AttackPower);
+
+		// 회피한 횟수 1 감소
+		MainGameInstance->SubtractEvasionAttackCount(1);
+	
+		// 플레이어에게 데미지 적용
+		UGameplayStatics::ApplyDamage(Player, AttackPower, EnemyController, this, UDamageType::StaticClass());
+	}
 }

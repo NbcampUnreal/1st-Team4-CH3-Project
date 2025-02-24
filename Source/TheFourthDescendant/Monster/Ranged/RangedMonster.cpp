@@ -4,6 +4,7 @@
 #include "RangedMonster.h"
 
 #include "EngineUtils.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Monster/Projectile/EnemyProjectile.h"
 
 ARangedMonster::ARangedMonster()
@@ -103,6 +104,11 @@ void ARangedMonster::Attack()
 		const FVector FireDirection = PlayerLocation - MuzzleLocation;
 		AEnemyProjectile* Projectile = GetWorld()->SpawnActor<AEnemyProjectile>(ProjectileClass, MuzzleLocation, FRotator::ZeroRotator);
 		Projectile->FireInDirection(FireDirection.GetSafeNormal());
+
+		// 회피한 공격 수 증가
+		UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+		UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+		MainGameInstance->AddEvasionAttackCount(1);
 	}
 }
 
