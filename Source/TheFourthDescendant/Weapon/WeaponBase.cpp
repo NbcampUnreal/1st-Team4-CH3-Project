@@ -8,7 +8,7 @@
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	USceneComponent* Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
@@ -18,10 +18,21 @@ AWeaponBase::AWeaponBase()
 
 	WeaponAttackPower = 10;
 	FireInterval = 0.2f;
+	RecoilAmount = 2.0f;
+	RecoilRecoverySpeed = 5.0f;
+	MaxRecoilAmount = 15.0f;
+	CurrentRecoilOffset = 0.0f;
 	
 	MaxAmmoInMagazine = 30;
 	CurrentAmmo = MaxAmmoInMagazine;
 	TotalAmmo = 90;
+}
+
+void AWeaponBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	ApplyRecoil(DeltaSeconds);
 }
 
 void AWeaponBase::StartShoot()
@@ -51,6 +62,7 @@ void AWeaponBase::Reload()
 	UE_LOG(LogTemp, Warning, TEXT("Total Ammo: %d, Current Ammo: %d"), TotalAmmo, CurrentAmmo);
 }
 
+// TO-DO : Attack 실행을 Animation Event에서 호출하도록 수정
 void AWeaponBase::Attack()
 {
 	if (CurrentAmmo <= 0)
@@ -61,11 +73,18 @@ void AWeaponBase::Attack()
 
 	PerformAttack();
 	CurrentAmmo--;
+	CurrentRecoilOffset = FMath::Clamp(CurrentRecoilOffset + RecoilAmount, 0.0f, MaxRecoilAmount);
 	
 	// SFX, VFX...
 	if (FireSfx)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSfx, GetActorLocation());
+	}
+
+	if (FireCameraShake)
+	{
+		// @Improve : Recoil에 따라 카메라 쉐이크의 강도를 강하게 적용하도록 수정
+		GetWorld()->GetFirstPlayerController()->PlayerCameraManager->StartCameraShake(FireCameraShake);
 	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("Attack : Current Ammo: %d"), CurrentAmmo);
@@ -73,4 +92,22 @@ void AWeaponBase::Attack()
 
 void AWeaponBase::PerformAttack()
 {
+	// 세부적인 공격 구현은 상속 받은 클래스에서 구현한다.
+}
+
+void AWeaponBase::ApplyRecoil(float DeltaTime)
+{
+	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+		PlayerController && CurrentRecoilOffset > 0.0f)
+	{
+		FRotator ControlRotation = PlayerController->GetControlRotation();
+
+		// 반동 적용
+		const float NewPitch = FMath::ClampAngle(ControlRotation.Pitch + CurrentRecoilOffset * DeltaTime, -88.0f, 88.0f);
+		ControlRotation.Pitch = NewPitch;
+		PlayerController->SetControlRotation(ControlRotation);
+
+		// FInterpTo는 Distance에 비례해서 움직이기 때문에 처음 움직임이 빠르다. 이러한 움직임을 만들어내기에 적합하다.
+		CurrentRecoilOffset = FMath::FInterpTo(CurrentRecoilOffset, 0.0f, DeltaTime, RecoilRecoverySpeed);
+	}
 }

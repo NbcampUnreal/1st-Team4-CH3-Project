@@ -32,6 +32,9 @@ APlayerCharacter::APlayerCharacter()
 	Status.WalkSpeed = 600.0f;
 	SprintSpeed = 1200.0f;
 	bIsSprinting = false;
+	bIsAiming = false;
+	bIsShooting = false;
+	bIsManualAiming = false;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -139,7 +142,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 				EnhancedInput->BindAction(
 					PlayerController->FireAction,
-					ETriggerEvent::Started,
+					ETriggerEvent::Triggered,
 					this,
 					&APlayerCharacter::TriggerShoot
 				);
@@ -265,6 +268,12 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	return  Amount;
 }
 
+void APlayerCharacter::UpdateIsAiming()
+{
+	bIsAiming = bIsManualAiming || bIsShooting;
+	bUseControllerRotationYaw = bIsAiming;
+}
+
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
@@ -360,51 +369,61 @@ void APlayerCharacter::Interaction(const FInputActionValue& Value)
 
 void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 {
+	if (!Controller) return;
+
+	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
+	if (CurrentWeapon)
+	{
+		bIsShooting = true;
+		CurrentWeapon->StartShoot();
+	}
+	UpdateIsAiming();
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
-	if (!Controller) return;
-
-	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
-	bIsAiming = true;
-	if (CurrentWeapon)
-	{
-		CurrentWeapon->StartShoot();
-	}
+	
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	bIsAiming = false;
+	bIsShooting = false;
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->StopShoot();
 	}
+	UpdateIsAiming();
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	bIsAiming = true;
-	bUseControllerRotationYaw = true;
+	// 무기가 없을 경우 Aim되어서는 안 된다.
+	if (CurrentWeapon)
+	{
+		bIsManualAiming = true;
+		bUseControllerRotationYaw = true;
+	}
+	UpdateIsAiming();
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	bIsAiming = false;
+	bIsManualAiming = false;
 	bUseControllerRotationYaw = false;
+	UpdateIsAiming();
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
+	// @To-Do : Star Animation
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->Reload();
