@@ -14,11 +14,21 @@ class THEFOURTHDESCENDANT_API AMeleeMonster : public AMonster
 public:
 	AMeleeMonster();
 
+public:
+	/** 점프 시작 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
+	bool bIsJumpStarted;
+	/** 점프 중 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
+	bool bIsJumping;
+	/** 점프 끝 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
+	bool bIsJumpEnded;
+
 protected:
 	/** 타격 체크용 캡슐 컴포넌트 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
 	UCapsuleComponent* AttackRangeComponent;
-	
 
 private:
 	/** 공격 로직은 단 한 번 실행하기 위함 */
