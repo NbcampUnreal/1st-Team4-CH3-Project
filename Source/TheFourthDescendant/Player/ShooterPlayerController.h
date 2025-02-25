@@ -53,7 +53,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	UUserWidget *HUDWidget;
 protected:
 	/** InputLocalPlayerSubsystem에 MappingContext를 추가 */

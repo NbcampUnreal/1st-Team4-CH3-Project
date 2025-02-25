@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "MainHUD.h"
 #include "CrossHairWidget.generated.h"
 
 class UImage;
@@ -11,6 +12,8 @@ class THEFOURTHDESCENDANT_API UCrossHairWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+	friend class UMainHUD;
+	
 public:
 	virtual void NativeOnInitialized() override;
 
@@ -32,7 +35,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component | Image")
 	TObjectPtr<UImage> CrossHair_R;
 
-public:
+protected:
 	UFUNCTION(BlueprintCallable, Category = "Move Control")
 	void Shoot();
 

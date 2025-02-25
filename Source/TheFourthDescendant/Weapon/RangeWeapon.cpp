@@ -11,8 +11,6 @@
 // Sets default values
 ARangeWeapon::ARangeWeapon()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
 }
 
 void ARangeWeapon::PerformAttack()
@@ -44,6 +42,7 @@ void ARangeWeapon::PerformAttack()
 		EnemyQueryParams.AddIgnoredActor(this);
 		EnemyQueryParams.AddIgnoredActor(GetOwner());
 		FHitResult HitResult;
+		// @TO-Do : SocketName이 잘못되었을 경우 처리
 		const FVector MuzzleLocation = GetWeaponMesh()->GetSocketLocation(FName(GetFireSocketName()));
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, TargetEnd, ECollisionChannel::ECC_Pawn, EnemyQueryParams))
 		{
