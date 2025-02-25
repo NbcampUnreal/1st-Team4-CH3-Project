@@ -9,26 +9,24 @@
 
 AMonsterSpawner::AMonsterSpawner()
 {
-	PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = false;
 
-	FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 8));
-	
+    FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 8));
     SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 8));
-	
     ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 7));
     ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 6));
 
     Levelindex = 0;
+    SpawnInterval = 0.2f;
+
+    CurrentMonsterCount = 0;
+    TotalMonsterCount = 0;
 }
+
 
 // (근접, 원거리) 스폰 위치에 몬스터 생성	
 void AMonsterSpawner::Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform)
 {
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Spawn function called for %s"), *UEnum::GetValueAsString(MonsterType)));
-    }
-
     if (GetWorld())
     {
         FActorSpawnParameters SpawnParams;
@@ -38,67 +36,35 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType, const FTransform& SpawnTra
 
         switch (MonsterType)
         {
-            case EMonsterType::Melee:
-                if (MeleeMonsterClass)
-                {
-                    NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
-                    if (NewMonster && GEngine)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Melee Monster Spawned"));
-                    }
-                    else if (GEngine)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Failed to Spawn Melee Monster"));
-                    }
-                }
-                else if (GEngine)
-                {
-                    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("MeleeMonsterClass is null"));
-                }
-                break;
+        case EMonsterType::Melee:
+            if (MeleeMonsterClass)
+            {
+                NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
+            }
+            break;
 
-            case EMonsterType::Ranged:
-                if (RangedMonsterClass)
-                {
-                    NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
-                    if (NewMonster && GEngine)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Ranged Monster Spawned"));
-                    }
-                    else if (GEngine)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Failed to Spawn Ranged Monster"));
-                    }
-                }
-                else if (GEngine)
-                {
-                    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("RangedMonsterClass is null"));
-                }
-                break;
+        case EMonsterType::Ranged:
+            if (RangedMonsterClass)
+            {
+                NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
+            }
+            break;
 
-            case EMonsterType::Boss:
-                // Boss 몬스터 생성 로직이 있는 경우 여기에 추가
+        case EMonsterType::Boss:
+            // Boss 몬스터 생성 로직이 있는 경우 여기에 추가
                 break;
         }
-
-        if (NewMonster && GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Spawn function finished"));
-        }
-    }
-    else if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("GetWorld() returned NULL"));
     }
 }
 
+// 랜덤한 위치에 몬스터 스폰하는 함수
 void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
 {
     if (GetWorld())
     {
         FVector SpawnLocation;
         bool bIsLocationValid = false;
-        int32 MaxAttempts = 100; // 반복 횟수 제한 설정
+        int32 MaxAttempts = 100;
         int32 Attempts = 0;
 
         while (!bIsLocationValid && Attempts < MaxAttempts)
@@ -126,10 +92,6 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
             if (bHasCollision)
             {
                 bIsLocationValid = false;
-                if (GEngine)
-                {
-                    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Collision detected. Retrying..."));
-                }
             }
 
             Attempts++;
@@ -162,26 +124,15 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
                     // Boss 몬스터 생성 로직이 있는 경우 여기에 추가
                     break;
             }
-
-            if (NewMonster && GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Monster Spawned Successfully"));
-            }
-        }
-        else if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Failed to find a valid spawn location after maximum attempts"));
         }
     }
 }
 
+
+
+// 여러 몬스터 스폰하는 함수
 void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
 {
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("SpawnMonsters called with LevelIndex: %d"), LevelIndex));
-    }
-
     TArray<TTuple<EMonsterType, int32>>* SpawnDataPtr = nullptr;
     TArray<FTransform>* MeleeTransformArrayPtr = nullptr;
     TArray<FTransform>* RangedTransformArrayPtr = nullptr;
@@ -191,54 +142,35 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
         case 0:
             SpawnDataPtr = &FirstWaveSpawnData;
             MeleeTransformArrayPtr = &FirstWaveTransformArray;
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Using FirstWaveSpawnData and FirstWaveTransformArray"));
-            }
             break;
         case 1:
             SpawnDataPtr = &SecondWaveSpawnData;
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Using SecondWaveSpawnData and random spawn"));
-            }
             break;
         case 2:
             SpawnDataPtr = &ThirdWaveSpawnData;
             MeleeTransformArrayPtr = &ThirdWaveMeleeTransformArray;
             RangedTransformArrayPtr = &ThirdWaveRangedTransformArray;
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Using ThirdWaveSpawnData, ThirdWaveMeleeTransformArray, and ThirdWaveRangedTransformArray"));
-            }
             break;
         default:
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Invalid LevelIndex"));
-            }
             return;
     }
 
     if (SpawnDataPtr)
     {
-        TArray<TTuple<EMonsterType, int32>>& SpawnData = *SpawnDataPtr;
-
-        for (const TTuple<EMonsterType, int32>& Data : SpawnData)
+        for (const TTuple<EMonsterType, int32>& Data : *SpawnDataPtr)
         {
             EMonsterType MonsterType = Data.Key;
             int32 Count = Data.Value;
-
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("MonsterType: %s, Count: %d"), *UEnum::GetValueAsString(MonsterType), Count));
-            }
 
             for (int32 i = 0; i < Count; ++i)
             {
                 if (LevelIndex == 1)
                 {
-                    RandomSpawn(MonsterType);
+                    // 0.2초 간격으로 랜덤 스폰
+                    GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, [this, MonsterType]()
+                    {
+                        RandomSpawn(MonsterType);
+                    }, SpawnInterval, false);
                 }
                 else if (MonsterType == EMonsterType::Melee && MeleeTransformArrayPtr)
                 {
@@ -251,10 +183,6 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
                     }
                     else
                     {
-                        if (GEngine)
-                        {
-                            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Not enough spawn points in MeleeTransformArray"));
-                        }
                         return;
                     }
                 }
@@ -269,30 +197,27 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
                     }
                     else
                     {
-                        if (GEngine)
-                        {
-                            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Not enough spawn points in RangedTransformArray"));
-                        }
                         return;
-                    }
-                }
-                else
-                {
-                    if (GEngine)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Invalid MonsterType or missing TransformArrayPtr"));
                     }
                 }
             }
         }
     }
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("SpawnMonsters finished"));
-    }
 }
 
+
+void AMonsterSpawner::SpawnNextMonster()
+{
+    if (CurrentMonsterCount < TotalMonsterCount)
+    {
+        RandomSpawn(CurrentMonsterType);
+        CurrentMonsterCount++;
+    }
+    else
+    {
+        GetWorld()->GetTimerManager().ClearTimer(SpawnTimerHandle);
+    }
+}
 
 
 void AMonsterSpawner::BeginPlay()
@@ -300,31 +225,7 @@ void AMonsterSpawner::BeginPlay()
 	Super::BeginPlay();
 
 	SpawnMonsters(Levelindex);
-
-	// 디버깅 로그 출력
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("BeginPlay Called"));
-	}
-
-	// 클래스 변수 확인 로그
-	if (MeleeMonsterClass)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("MeleeMonsterClass is set"));
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("MeleeMonsterClass is NOT set"));
-	}
-
-	if (RangedMonsterClass)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("RangedMonsterClass is set"));
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("RangedMonsterClass is NOT set"));
-	}
 }
+
 
 

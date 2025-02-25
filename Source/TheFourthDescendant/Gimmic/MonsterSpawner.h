@@ -28,11 +28,14 @@ public:
 public:
 protected:
 	/* 몬스터 스폰 주기 */
+	UPROPERTY(EditAnywhere, Category="Spawning")
 	float SpawnInterval;
-	/* 몬스터 스폰 장소 */
-	TArray<FVector> SpawnPoints;
-	/* 스폰시킬 몬스터 */
-	TArray<AMonster> SpawnEnemy;
+	/* FTimerHandle */
+	FTimerHandle SpawnTimerHandle;
+	int32 CurrentMonsterCount;
+	int32 TotalMonsterCount;
+	EMonsterType CurrentMonsterType;
+
 	/* 스폰시킬 근거리 몬스터 클래스 */	
 	UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> MeleeMonsterClass;
@@ -60,6 +63,7 @@ public:
 	void Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform);
 	void RandomSpawn(EMonsterType MonsterType);
 	void SpawnMonsters(int32 LevelIndex);
+	void SpawnNextMonster();
 	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
 	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
 	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
