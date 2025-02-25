@@ -247,10 +247,12 @@ void APlayerCharacter::BeginPlay()
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 
-	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass);
-	if (CurrentWeapon)
+	if (StartWeaponClass)
 	{
-		Equip(CurrentWeapon);
+		if (AWeaponBase* StartWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass))
+		{
+			Equip(StartWeapon);
+		}
 	}
 }
 
