@@ -9,6 +9,7 @@
 
 class AWeaponBase;
 struct FInputActionValue;
+enum class EAmmoType;
 
 UCLASS()
 class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
@@ -35,18 +36,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
 	float CrouchSpeed;
 	/** 캐릭터가 달리고 있는지 여부 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsSprinting;
 	/** 캐릭터가 숙이고 있는 중인지 여부 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsCrouching;
 	/** 캐릭터가 조준 중인지 여부, 왼클릭해서 공격 중이거나 오른 클릭해서 조준 중이거나 둘 중 하나이다. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsAiming;
 	/** 캐릭터가 공격 버튼을 눌렀을 경우 */
 	bool bIsShooting;
 	/** 캐릭터가 오른쪽 마우스 버튼을 눌러서 조준을 하고 있을 경우 */
 	bool bIsManualAiming;
+	/** 재장중인지 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bIsReloading;
 
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
@@ -58,6 +62,15 @@ protected:
 	/** 현재 장착된 무기 */
 	UPROPERTY()
 	AWeaponBase* CurrentWeapon;
+	/** 재장전 UI를 업데이트 할 Timer의 핸들 */
+	FTimerHandle ReloadUIUpdateTimerHandle;
+	/** 재장전 UI를 업데이트 할 주기 */
+	float ReloadUIUpdateInterval;
+	/** 재장전 진행 경과 시간 */
+	float ReloadElapsedTime;
+	/** 총알 소지 개수*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon")
+	TMap<EAmmoType, int32> AmmoInventory;
 	
 private:
 	/** TPS 카메라 컴포넌트 */
@@ -90,6 +103,9 @@ public:
 
 	/** 무기를 장착 */
 	void Equip(class AWeaponBase* Weapon);
+	/** 탄약 추가 */
+	UFUNCTION(BlueprintCallable)
+	void AddAmmo(EAmmoType AmmoType, int Amount);
 	
 protected:
 	virtual void BeginPlay() override;
@@ -97,7 +113,16 @@ protected:
 
 	/** bIsShooting, bIsRightButtonAiming을 이용해서 최종 Aim 여부를 결정 */
 	void UpdateIsAiming();
-	
+
+	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
+	void InitAmmoInventory();
+	/** 리로드 UI 업데이트 콜백 함수 */
+	UFUNCTION()
+	void OnReloadUIUpdate();
+	/** 리로드 애니메이션 종료 콜백 함수 */
+	UFUNCTION()
+	void OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
 	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.
 	 */

@@ -28,11 +28,18 @@ public:
 public:
 protected:
 	/* 몬스터 스폰 주기 */
+	UPROPERTY(EditAnywhere, Category="Spawning")
 	float SpawnInterval;
-	/* 몬스터 스폰 장소 */
-	TArray<FVector> SpawnPoints;
-	/* 스폰시킬 몬스터 */
-	TArray<AMonster> SpawnEnemy;
+	/* FTimerHandle */
+	FTimerHandle SpawnTimerHandle;
+	/* 현재 스폰된 몬스터 수 */
+	int32 CurrentMonsterCount;
+	/* 스폰할 몬스터 타입 */
+	EMonsterType CurrentMonsterType;
+	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
+	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
+	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
+
 	/* 스폰시킬 근거리 몬스터 클래스 */	
 	UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> MeleeMonsterClass;
@@ -56,13 +63,13 @@ protected:
 	
 private:
 
-public:	
+public:
+	/* 몬스터 하나를 스폰시키는 함수 */
 	void Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform);
+	/* 몬스터 하나를 랜덤 스폰시키는 함수 */
 	void RandomSpawn(EMonsterType MonsterType);
+	/* 몬스터 웨이브를 스폰시키는 함수 */
 	void SpawnMonsters(int32 LevelIndex);
-	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
-	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
-	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
 protected:
 	virtual void BeginPlay() override;
 private:
