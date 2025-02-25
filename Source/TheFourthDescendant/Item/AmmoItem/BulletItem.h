@@ -4,20 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "TheFourthDescendant/Item/BaseItem.h"
-#include "HealingItem.generated.h"
+#include "BulletItem.generated.h"
 
 UCLASS()
-class THEFOURTHDESCENDANT_API AHealingItem : public ABaseItem
+class THEFOURTHDESCENDANT_API ABulletItem : public ABaseItem
 {
 	GENERATED_BODY()
 
 public:
-	AHealingItem();
+	ABulletItem();
 
 protected:
-	// 힐량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	int32 HealAmount;
+	int32 AmmoAmount;
 
 	virtual void ActivateItem(AActor* Activator) override;
 };

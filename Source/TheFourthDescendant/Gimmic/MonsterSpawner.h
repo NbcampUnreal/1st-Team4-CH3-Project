@@ -32,9 +32,13 @@ protected:
 	float SpawnInterval;
 	/* FTimerHandle */
 	FTimerHandle SpawnTimerHandle;
+	/* 현재 스폰된 몬스터 수 */
 	int32 CurrentMonsterCount;
+	/* 스폰할 몬스터 타입 */
 	EMonsterType CurrentMonsterType;
-	FTimerHandle SecondWaveTimerHandle;
+	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
+	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
+	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
 
 	/* 스폰시킬 근거리 몬스터 클래스 */	
 	UPROPERTY(EditAnywhere, Category="Spawning")
@@ -59,14 +63,13 @@ protected:
 	
 private:
 
-public:	
+public:
+	/* 몬스터 하나를 스폰시키는 함수 */
 	void Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform);
+	/* 몬스터 하나를 랜덤 스폰시키는 함수 */
 	void RandomSpawn(EMonsterType MonsterType);
+	/* 몬스터 웨이브를 스폰시키는 함수 */
 	void SpawnMonsters(int32 LevelIndex);
-	void SpawnNextMonster();
-	TArray<TTuple<EMonsterType, int32>> FirstWaveSpawnData;
-	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
-	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
 protected:
 	virtual void BeginPlay() override;
 private:
