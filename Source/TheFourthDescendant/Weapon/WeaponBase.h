@@ -21,9 +21,7 @@ public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
-	UFUNCTION(BlueprintCallable)
-	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
-	
+
 protected:
 	/** ApplyRecoil을 호출해서 반동 감쇄*/
 	virtual void Tick(float DeltaSeconds) override;
@@ -32,21 +30,21 @@ protected:
 	FString GetFireSocketName() const { return FireSocketName; }
 	
 	/** 무기의 공격력 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	int32 WeaponAttackPower;
 	/** 무기의 발사 간격 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	float FireInterval;
 	/** 무기의 발사 타이머 핸들 */
 	FTimerHandle FireTimerHandle;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	/** 사격 시에 반동으로 올라가는 값. CurrentRecoilOffset에 더해지고 이 값을 바탕으로 총구를 위로 올린다. */
 	float RecoilAmount;
 	/** 반동 후에 원래대로 돌아가는 시간 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	float RecoilRecoverySpeed;
 	/** 최대 반동 값. 너무 빠른 사격으로 인한 반동이 너무 커지는 것을 방지하기 위함 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	float MaxRecoilAmount;
 	/** 반동으로 현재 프레임 상승 각도, 매 프레임 RecoverySpeed로 인해 감소된다. */
 	float CurrentRecoilOffset;
@@ -59,18 +57,27 @@ protected:
 	int TotalAmmo;
 
 	/** 발사 사운드 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
 	USoundBase* FireSfx;
+	/** 재장전 시작 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
+	USoundBase* ReloadSfx;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
+	USoundBase* ReloadEndSfx;
+	/** 총알이 없을 때 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
+	USoundBase* RattleSfx;
+	
 	/** 사격 중에 발생하는 카메라 흔들림*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	TSubclassOf<UCameraShakeBase> FireCameraShake;
 	/** 리로드 애니메이션 몽타주 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UAnimMontage* ReloadMontage;
 	
 private:
 	/** 사격이 발생하는 소켓 이름*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
 	FString FireSocketName;
 	
 public:
@@ -83,6 +90,11 @@ public:
 	/** 재장전 애니메이션 몽타주 반환 */
 	UFUNCTION(BlueprintCallable)
 	UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
+	UFUNCTION(BlueprintCallable)
+	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
+
+	USoundBase* GetReloadSfx() const { return ReloadSfx; }
+	USoundBase* GetReloadEndSfx() const { return ReloadEndSfx; }
 	
 protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */

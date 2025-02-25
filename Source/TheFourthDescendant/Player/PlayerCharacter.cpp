@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -461,13 +462,8 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
-	if (!Controller || !CurrentWeapon || bIsReloading) return;
-
-	if (CurrentWeapon->IsMagazineFull())
-	{
-		// Play Sound
-		return;
-	}
+	// 상태가 많아지고 있다. FSM 사용을 고려할 것
+	if (!Controller || !CurrentWeapon || bIsReloading || CurrentWeapon->IsMagazineFull()) return;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
