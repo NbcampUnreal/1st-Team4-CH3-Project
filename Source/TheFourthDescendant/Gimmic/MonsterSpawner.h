@@ -33,8 +33,8 @@ protected:
 	/* FTimerHandle */
 	FTimerHandle SpawnTimerHandle;
 	int32 CurrentMonsterCount;
-	int32 TotalMonsterCount;
 	EMonsterType CurrentMonsterType;
+	FTimerHandle SecondWaveTimerHandle;
 
 	/* 스폰시킬 근거리 몬스터 클래스 */	
 	UPROPERTY(EditAnywhere, Category="Spawning")

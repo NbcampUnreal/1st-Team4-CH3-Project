@@ -20,8 +20,9 @@ AMonsterSpawner::AMonsterSpawner()
     SpawnInterval = 0.2f;
 
     CurrentMonsterCount = 0;
-    TotalMonsterCount = 0;
 }
+
+
 
 
 // (근접, 원거리) 스폰 위치에 몬스터 생성	
@@ -69,11 +70,9 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
 
         while (!bIsLocationValid && Attempts < MaxAttempts)
         {
-            // 랜덤 위치 선택
             SpawnLocation = UKismetMathLibrary::RandomPointInBoundingBox(SpawnArea.GetCenter(), SpawnArea.GetExtent());
             bIsLocationValid = true;
 
-            // 충돌 체크
             TArray<FHitResult> HitResults;
             FCollisionQueryParams QueryParams;
             QueryParams.bTraceComplex = true;
@@ -85,7 +84,7 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
                 SpawnLocation + FVector(0.1f, 0.1f, 0.1f),
                 FQuat::Identity,
                 ECC_Pawn,
-                FCollisionShape::MakeSphere(50.0f), // 충돌 범위 설정
+                FCollisionShape::MakeSphere(50.0f),
                 QueryParams
             );
 
@@ -103,7 +102,6 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
             SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
             AMonster* NewMonster = nullptr;
-
             switch (MonsterType)
             {
                 case EMonsterType::Melee:
@@ -112,16 +110,14 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
                         NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
                     }
                     break;
-
                 case EMonsterType::Ranged:
                     if (RangedMonsterClass)
                     {
                         NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
                     }
                     break;
-
                 case EMonsterType::Boss:
-                    // Boss 몬스터 생성 로직이 있는 경우 여기에 추가
+                    // Boss 몬스터 생성 로직 추가 시 여기에
                     break;
             }
         }
@@ -130,23 +126,27 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
 
 
 
+
 // 여러 몬스터 스폰하는 함수
 void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
 {
+    CurrentMonsterCount = 0;
+    Levelindex = LevelIndex;
+
     TArray<TTuple<EMonsterType, int32>>* SpawnDataPtr = nullptr;
     TArray<FTransform>* MeleeTransformArrayPtr = nullptr;
     TArray<FTransform>* RangedTransformArrayPtr = nullptr;
 
     switch (LevelIndex)
     {
-        case 0:
+        case 0: // 웨이브 1
             SpawnDataPtr = &FirstWaveSpawnData;
             MeleeTransformArrayPtr = &FirstWaveTransformArray;
             break;
-        case 1:
+        case 1: // 웨이브 2 (랜덤 스폰)
             SpawnDataPtr = &SecondWaveSpawnData;
             break;
-        case 2:
+        case 2: // 웨이브 3
             SpawnDataPtr = &ThirdWaveSpawnData;
             MeleeTransformArrayPtr = &ThirdWaveMeleeTransformArray;
             RangedTransformArrayPtr = &ThirdWaveRangedTransformArray;
@@ -159,66 +159,53 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
     {
         for (const TTuple<EMonsterType, int32>& Data : *SpawnDataPtr)
         {
-            EMonsterType MonsterType = Data.Key;
-            int32 Count = Data.Value;
+            CurrentMonsterType = Data.Key;
+            int32 Count = Data.Value;  // 실제 생성해야 하는 몬스터 수
 
-            for (int32 i = 0; i < Count; ++i)
+            if (LevelIndex == 1)
             {
-                if (LevelIndex == 1)
+                // 두 번째 웨이브: 타이머를 이용하여 일정 간격으로 랜덤 스폰
+                GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, [this, Count]()
                 {
-                    // 0.2초 간격으로 랜덤 스폰
-                    GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, [this, MonsterType]()
+                    if (CurrentMonsterCount < Count)
                     {
-                        RandomSpawn(MonsterType);
-                    }, SpawnInterval, false);
-                }
-                else if (MonsterType == EMonsterType::Melee && MeleeTransformArrayPtr)
-                {
-                    TArray<FTransform>& MeleeTransformArray = *MeleeTransformArrayPtr;
-
-                    if (i < MeleeTransformArray.Num())
-                    {
-                        const FTransform& SpawnTransform = MeleeTransformArray[i];
-                        Spawn(MonsterType, SpawnTransform);
+                        RandomSpawn(CurrentMonsterType);
+                        CurrentMonsterCount++;
                     }
                     else
                     {
-                        return;
+                        GetWorld()->GetTimerManager().ClearTimer(SpawnTimerHandle);
                     }
-                }
-                else if (MonsterType == EMonsterType::Ranged && RangedTransformArrayPtr)
+                }, SpawnInterval, true);
+            }
+            else
+            {
+                // 웨이브 1 및 웨이브 3: 지정된 스폰 포인트에서 동시에 스폰
+                for (int32 i = 0; i < Count; ++i)
                 {
-                    TArray<FTransform>& RangedTransformArray = *RangedTransformArrayPtr;
-
-                    if (i < RangedTransformArray.Num())
+                    if (CurrentMonsterType == EMonsterType::Melee && MeleeTransformArrayPtr)
                     {
-                        const FTransform& SpawnTransform = RangedTransformArray[i];
-                        Spawn(MonsterType, SpawnTransform);
+                        TArray<FTransform>& MeleeTransformArray = *MeleeTransformArrayPtr;
+                        if (i < MeleeTransformArray.Num())
+                        {
+                            const FTransform& SpawnTransform = MeleeTransformArray[i];
+                            Spawn(CurrentMonsterType, SpawnTransform);
+                        }
                     }
-                    else
+                    else if (CurrentMonsterType == EMonsterType::Ranged && RangedTransformArrayPtr)
                     {
-                        return;
+                        TArray<FTransform>& RangedTransformArray = *RangedTransformArrayPtr;
+                        if (i < RangedTransformArray.Num())
+                        {
+                            const FTransform& SpawnTransform = RangedTransformArray[i];
+                            Spawn(CurrentMonsterType, SpawnTransform);
+                        }
                     }
                 }
             }
         }
     }
 }
-
-
-void AMonsterSpawner::SpawnNextMonster()
-{
-    if (CurrentMonsterCount < TotalMonsterCount)
-    {
-        RandomSpawn(CurrentMonsterType);
-        CurrentMonsterCount++;
-    }
-    else
-    {
-        GetWorld()->GetTimerManager().ClearTimer(SpawnTimerHandle);
-    }
-}
-
 
 void AMonsterSpawner::BeginPlay()
 {
