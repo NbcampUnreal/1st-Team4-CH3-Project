@@ -25,7 +25,6 @@ AWeaponBase::AWeaponBase()
 	
 	MaxAmmoInMagazine = 30;
 	CurrentAmmo = MaxAmmoInMagazine;
-	TotalAmmo = 90;
 }
 
 void AWeaponBase::Tick(float DeltaSeconds)
@@ -46,8 +45,10 @@ void AWeaponBase::StopShoot()
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
 }
 
-void AWeaponBase::Reload()
+void AWeaponBase::Reload(int& TotalAmmo)
 {
+	if (TotalAmmo <= 0) return;
+	
 	const int AmmoToReload = MaxAmmoInMagazine - CurrentAmmo;
 	if (TotalAmmo >= AmmoToReload)
 	{

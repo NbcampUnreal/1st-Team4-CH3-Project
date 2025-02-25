@@ -6,6 +6,16 @@
 #include "GameFramework/Actor.h"
 #include "WeaponBase.generated.h"
 
+UENUM()
+enum class EAmmoType
+{
+	Normal,
+	Speed,
+	Power,
+	Count UMETA(Hidden),
+};
+ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
+
 UCLASS(Abstract)
 class THEFOURTHDESCENDANT_API AWeaponBase : public AActor
 {
@@ -28,7 +38,10 @@ protected:
 
 	/** 발사 소켓 이름을 반환 */
 	FString GetFireSocketName() const { return FireSocketName; }
-	
+
+	/** 무기가 사용하는 탄약 타입 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
+	EAmmoType AmmoType;
 	/** 무기의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	int32 WeaponAttackPower;
@@ -53,8 +66,6 @@ protected:
 	int MaxAmmoInMagazine;
 	/** 현재 탄약 수 */
 	int CurrentAmmo;
-	/** 탄약의 총 수 */
-	int TotalAmmo;
 
 	/** 발사 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
@@ -81,12 +92,15 @@ private:
 	FString FireSocketName;
 	
 public:
+	/** 무기가 사용하는 타입을 반환 */
+	EAmmoType GetAmmoType() const { return AmmoType; }
+	
 	/** 무기를 발사 */
 	void StartShoot();
 	/** 무기 발사 중지 */
 	void StopShoot();
-	/** 탄약 재장전 */
-	void Reload();
+	/** 탄약 재장전, 총 탄환 수는 호출 후에 갱신된다. */
+	void Reload(int& TotalAmmo);
 	/** 재장전 애니메이션 몽타주 반환 */
 	UFUNCTION(BlueprintCallable)
 	UAnimMontage* GetReloadMontage() const { return ReloadMontage; }

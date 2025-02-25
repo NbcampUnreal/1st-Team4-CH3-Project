@@ -5,10 +5,9 @@
 
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
-#include "Camera/CameraComponent.h"
+#include "Camera/CameraComponent.h"6
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -254,6 +253,21 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	Weapon->SetOwner(this);
 }
 
+void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
+{
+	if (Amount <= 0) return;
+
+	// C++ STL과 다르게 없는 키에 접근하는 것은 허용되지 않는다.
+	if (AmmoInventory.Contains(AmmoType))
+	{
+		AmmoInventory[AmmoType] += Amount;
+	}
+	else
+	{
+		AmmoInventory.Add(AmmoType, Amount);
+	}
+}
+
 
 void APlayerCharacter::BeginPlay()
 {
@@ -261,6 +275,7 @@ void APlayerCharacter::BeginPlay()
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 
+	InitAmmoInventory();
 	if (StartWeaponClass)
 	{
 		if (AWeaponBase* StartWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass))
@@ -290,6 +305,17 @@ void APlayerCharacter::UpdateIsAiming()
 	bUseControllerRotationYaw = bIsAiming;
 }
 
+void APlayerCharacter::InitAmmoInventory()
+{
+	for (const EAmmoType AmmoType : TEnumRange<EAmmoType>())
+	{
+		if (!AmmoInventory.Contains(AmmoType))
+		{
+			AmmoInventory.Add(AmmoType, 0);
+		}
+	}
+}
+
 void APlayerCharacter::OnReloadUIUpdate()
 {
 	if (!CurrentWeapon || !CurrentWeapon->GetReloadMontage())
@@ -311,7 +337,8 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
 	if (CurrentWeapon)
 	{
-		CurrentWeapon->Reload();
+		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
+		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
 	}
 }
 
@@ -463,7 +490,8 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
 	// 상태가 많아지고 있다. FSM 사용을 고려할 것
-	if (!Controller || !CurrentWeapon || bIsReloading || CurrentWeapon->IsMagazineFull()) return;
+	if (!Controller || !CurrentWeapon || bIsReloading) return;
+	if (CurrentWeapon->IsMagazineFull() || AmmoInventory[CurrentWeapon->GetAmmoType()] <= 0) return;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
