@@ -461,16 +461,23 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
-	if (!Controller) return;
+	if (!Controller || !CurrentWeapon || bIsReloading) return;
 
-	// @To-Do : Star Animation
-	if (CurrentWeapon && CurrentWeapon->GetReloadMontage() && GetMesh() && GetMesh()->GetAnimInstance())
+	if (CurrentWeapon->IsMagazineFull())
 	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
+		// Play Sound
+		return;
+	}
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
+
+	if (AnimInstance && ReloadMontage)
+	{
 		AnimInstance->Montage_Play(ReloadMontage);
 		
 		FOnMontageEnded MontageEndDelegate;
+		// 몽타주가 실행된 다음은 인스턴스가 사라지기 때문에 호출할 때마다 바인딩해야 한다.
 		MontageEndDelegate.BindUObject(this, &APlayerCharacter::OnReloadMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, ReloadMontage);
 

@@ -21,6 +21,8 @@ public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
+	UFUNCTION(BlueprintCallable)
+	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
 	
 protected:
 	/** ApplyRecoil을 호출해서 반동 감쇄*/
