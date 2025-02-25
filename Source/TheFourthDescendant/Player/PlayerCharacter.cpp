@@ -5,7 +5,7 @@
 
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
-#include "Camera/CameraComponent.h"6
+#include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
