@@ -62,6 +62,9 @@ protected:
 	/** 사격 중에 발생하는 카메라 흔들림*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UCameraShakeBase> FireCameraShake;
+	/** 리로드 애니메이션 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UAnimMontage* ReloadMontage;
 	
 private:
 	/** 사격이 발생하는 소켓 이름*/
@@ -75,7 +78,10 @@ public:
 	void StopShoot();
 	/** 탄약 재장전 */
 	void Reload();
-
+	/** 재장전 애니메이션 몽타주 반환 */
+	UFUNCTION(BlueprintCallable)
+	UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
+	
 protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */
 	UFUNCTION()

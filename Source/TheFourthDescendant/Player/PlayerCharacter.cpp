@@ -35,6 +35,10 @@ APlayerCharacter::APlayerCharacter()
 	bIsAiming = false;
 	bIsShooting = false;
 	bIsManualAiming = false;
+	bIsReloading = false;
+
+	ReloadUIUpdateInterval = 0.1f;
+	ReloadElapsedTime = 0.0f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -235,8 +239,17 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 {
-	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+	if (Weapon == CurrentWeapon) return;
+	// @To-Do : 기존 무기가 있으면 탈착
+	if (CurrentWeapon != nullptr)
+	{
+		
+	}
+
 	CurrentWeapon = Weapon;
+	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
+	
+	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
 	Weapon->SetOwner(this);
 }
 
@@ -274,6 +287,31 @@ void APlayerCharacter::UpdateIsAiming()
 {
 	bIsAiming = bIsManualAiming || bIsShooting;
 	bUseControllerRotationYaw = bIsAiming;
+}
+
+void APlayerCharacter::OnReloadUIUpdate()
+{
+	if (!CurrentWeapon || !CurrentWeapon->GetReloadMontage())
+	{
+		return;
+	}
+
+	// 현재 재장전 애니메이션의 진행도를 계산
+	// Montage_GetPosition은 Blend Out 되는 순간에 0을 반환하기 때문에 Blend를 포함해서 전체 시간을 확인할 수 없다.
+	// 따라서 진행 사항을 직접 계산한다.
+	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
+	ReloadElapsedTime += ReloadUIUpdateInterval;
+	float ReloadProgress = ReloadElapsedTime / ReloadMontage->GetPlayLength();
+	UE_LOG(LogTemp, Display, TEXT("Reload Progress : %f"), ReloadProgress);
+}
+
+void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Reload();
+	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -426,8 +464,17 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	// @To-Do : Star Animation
-	if (CurrentWeapon)
+	if (CurrentWeapon && CurrentWeapon->GetReloadMontage() && GetMesh() && GetMesh()->GetAnimInstance())
 	{
-		CurrentWeapon->Reload();
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
+		AnimInstance->Montage_Play(ReloadMontage);
+		
+		FOnMontageEnded MontageEndDelegate;
+		MontageEndDelegate.BindUObject(this, &APlayerCharacter::OnReloadMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, ReloadMontage);
+
+		ReloadElapsedTime = 0.0f;
+		GetWorldTimerManager().SetTimer(ReloadUIUpdateTimerHandle, this, &APlayerCharacter::OnReloadUIUpdate, ReloadUIUpdateInterval, true);
 	}
 }
