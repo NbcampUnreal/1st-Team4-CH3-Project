@@ -1,33 +1,33 @@
-﻿
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "MainHUD.h"
-#include "PlayerStatusWidget.generated.h"
+#include "MainHUD.generated.h"
+
+class UCrossHairWidget;
+class UPlayerStatusWidget;
 
 UCLASS()
-class THEFOURTHDESCENDANT_API UPlayerStatusWidget : public UUserWidget
+class THEFOURTHDESCENDANT_API UMainHUD : public UUserWidget
 {
 	GENERATED_BODY()
 
-	friend class UMainHUD;
-	
 public:
 	virtual void NativeOnInitialized() override;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bullet")
-	int32 BulletInMag;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bullet")
-	int32 TotalMagsBullet;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	TObjectPtr<UCrossHairWidget> CrossHairWidget;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	TObjectPtr<UPlayerStatusWidget> PlayerStatusWidget;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
-	float HPPercent;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gauge")
-	float SPPercent;
-
-protected:
+public:
+#pragma region CrossHair Widget
+	UFUNCTION(BlueprintCallable, Category = "Move Control")
+	void Shoot();
+#pragma endregion CrossHair Widget
+	
+#pragma region Player Status Widget
 	UFUNCTION(BlueprintCallable, Category = "Setting Bullet Infos | InMagazine")
 	void IncreaseBulletInMag();
 	UFUNCTION(BlueprintCallable, Category = "Setting Bullet Infos | InMagazine")
@@ -60,5 +60,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Setting ProgressBar")
 	void SetSPPercentOneParams(float Percent);
 	UFUNCTION(BlueprintCallable, Category = "Setting ProgressBar")
-	float GetSPPercent() const;	
+	float GetSPPercent() const;
+#pragma endregion Player Status Widget
 };
