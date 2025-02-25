@@ -35,6 +35,10 @@ APlayerCharacter::APlayerCharacter()
 	bIsAiming = false;
 	bIsShooting = false;
 	bIsManualAiming = false;
+	bIsReloading = false;
+
+	ReloadUIUpdateInterval = 0.1f;
+	ReloadElapsedTime = 0.0f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -235,9 +239,33 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 {
-	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+	if (Weapon == CurrentWeapon) return;
+	// @To-Do : 기존 무기가 있으면 탈착
+	if (CurrentWeapon != nullptr)
+	{
+		
+	}
+
 	CurrentWeapon = Weapon;
+	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
+	
+	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
 	Weapon->SetOwner(this);
+}
+
+void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
+{
+	if (Amount <= 0) return;
+
+	// C++ STL과 다르게 없는 키에 접근하는 것은 허용되지 않는다.
+	if (AmmoInventory.Contains(AmmoType))
+	{
+		AmmoInventory[AmmoType] += Amount;
+	}
+	else
+	{
+		AmmoInventory.Add(AmmoType, Amount);
+	}
 }
 
 
@@ -247,10 +275,13 @@ void APlayerCharacter::BeginPlay()
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 
-	CurrentWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass);
-	if (CurrentWeapon)
+	InitAmmoInventory();
+	if (StartWeaponClass)
 	{
-		Equip(CurrentWeapon);
+		if (AWeaponBase* StartWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass))
+		{
+			Equip(StartWeapon);
+		}
 	}
 }
 
@@ -272,6 +303,43 @@ void APlayerCharacter::UpdateIsAiming()
 {
 	bIsAiming = bIsManualAiming || bIsShooting;
 	bUseControllerRotationYaw = bIsAiming;
+}
+
+void APlayerCharacter::InitAmmoInventory()
+{
+	for (const EAmmoType AmmoType : TEnumRange<EAmmoType>())
+	{
+		if (!AmmoInventory.Contains(AmmoType))
+		{
+			AmmoInventory.Add(AmmoType, 0);
+		}
+	}
+}
+
+void APlayerCharacter::OnReloadUIUpdate()
+{
+	if (!CurrentWeapon || !CurrentWeapon->GetReloadMontage())
+	{
+		return;
+	}
+
+	// 현재 재장전 애니메이션의 진행도를 계산
+	// Montage_GetPosition은 Blend Out 되는 순간에 0을 반환하기 때문에 Blend를 포함해서 전체 시간을 확인할 수 없다.
+	// 따라서 진행 사항을 직접 계산한다.
+	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
+	ReloadElapsedTime += ReloadUIUpdateInterval;
+	float ReloadProgress = ReloadElapsedTime / ReloadMontage->GetPlayLength();
+	UE_LOG(LogTemp, Display, TEXT("Reload Progress : %f"), ReloadProgress);
+}
+
+void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
+	if (CurrentWeapon)
+	{
+		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
+		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
+	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -421,11 +489,23 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
-	if (!Controller) return;
+	// 상태가 많아지고 있다. FSM 사용을 고려할 것
+	if (!Controller || !CurrentWeapon || bIsReloading) return;
+	if (CurrentWeapon->IsMagazineFull() || AmmoInventory[CurrentWeapon->GetAmmoType()] <= 0) return;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
 
-	// @To-Do : Star Animation
-	if (CurrentWeapon)
+	if (AnimInstance && ReloadMontage)
 	{
-		CurrentWeapon->Reload();
+		AnimInstance->Montage_Play(ReloadMontage);
+		
+		FOnMontageEnded MontageEndDelegate;
+		// 몽타주가 실행된 다음은 인스턴스가 사라지기 때문에 호출할 때마다 바인딩해야 한다.
+		MontageEndDelegate.BindUObject(this, &APlayerCharacter::OnReloadMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, ReloadMontage);
+
+		ReloadElapsedTime = 0.0f;
+		GetWorldTimerManager().SetTimer(ReloadUIUpdateTimerHandle, this, &APlayerCharacter::OnReloadUIUpdate, ReloadUIUpdateInterval, true);
 	}
 }
