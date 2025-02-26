@@ -16,7 +16,6 @@ class THEFOURTHDESCENDANT_API UCrossHairWidget : public UUserWidget
 	
 public:
 	virtual void NativeOnInitialized() override;
-	virtual void NativeConstruct() override;
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Move Control")
