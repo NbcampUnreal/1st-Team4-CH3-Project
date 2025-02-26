@@ -48,6 +48,9 @@ EPathFollowingRequestResult::Type ABossController::MoveToTargetLocation(const FV
 
 void ABossController::OnMoveCompletedCallback(FAIRequestID RequestID, const FPathFollowingResult& Result)
 {
-
+	if (Result.Code == EPathFollowingResult::Success)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "ABossController::OnMoveCompletedCallback : Success");
+	}
 }
 
