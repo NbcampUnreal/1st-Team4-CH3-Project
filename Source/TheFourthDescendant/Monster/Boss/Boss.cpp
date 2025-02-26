@@ -12,7 +12,6 @@ ABoss::ABoss()
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
-	Player = nullptr;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
 	ApproachAcceptance = 600;
@@ -25,13 +24,6 @@ ABoss::ABoss()
 void ABoss::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// 캐릭터 이동속도 초기화
-	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
-
-	// 체력 및 쉴드 초기화
-	Status.Health = Status.MaxHealth;
-	Status.Shield = Status.MaxShield;
 
 	// 플레이어 캐스팅
 	Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(),0));
@@ -55,12 +47,19 @@ void ABoss::BeginPlay()
 	}
 
 	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
+
+	// 캐릭터 이동속도 초기화
+	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+
+	// 체력 및 쉴드 초기화
+	Status.Health = Status.MaxHealth;
+	Status.Shield = Status.MaxShield;
 }
 
 
 
 float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-	class AController* EventInstigator, AActor* DamageCauser)
+                        class AController* EventInstigator, AActor* DamageCauser)
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
@@ -76,9 +75,49 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 
 void ABoss::MoveToTarget()
 {
+	// idle 상태라면 움직이지 않음
+	if (MovementState == EBossMovementState::Idle) return;
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Black, FString::Printf(TEXT("Velocity : %f"),  GetVelocity().Length()));
+
 	BossController->MoveToTargetActor(Player);
 }
 
+
+
+void ABoss::MoveBack()
+{
+	// 보스의 후방 벡터 반환
+	FVector ForwardVector = GetActorForwardVector();
+	FVector BackDirection = -(ForwardVector.GetSafeNormal());
+
+	// 뒤로 이동
+	AddMovementInput(BackDirection, 1.0f);
+}
+
+void ABoss::RotationToTarget(float DeltaSeconds)
+{
+	// 보스와 플레이어의 현재 위치를 가져옴
+	FVector BossLocation = GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 정규화된 방향 벡터 (LookAt 방향)
+	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
+
+	// 목표 회전 각도 계산 (Yaw만 변경)
+	FRotator TargetRotation = Direction.Rotation();
+	TargetRotation.Pitch = 0; // 상하 방향 회전 방지 (Yaw만 적용)
+
+	// 현재 회전 값 가져오기
+	FRotator CurrentRotation = GetActorRotation();
+
+	// DeltaSeconds를 활용한 부드러운 보간
+	FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaSeconds, RotationSpeed);
+
+	// 보스 회전 적용
+	SetActorRotation(NewRotation);
+
+	SetMoveState();
+}
 
 
 void ABoss::OnDeath()
@@ -155,9 +194,12 @@ void ABoss::SetMoveState()
 				MovementState = EBossMovementState::Surrounding;
 			}
 			break;
+
+		// (4) Idle 상태
 		case EBossMovementState::Idle:
 			break;
 	}
+	
 
 	// blackboard 값 초기화
 	InitBlackboardMovementFlag(MovementState);
@@ -165,8 +207,15 @@ void ABoss::SetMoveState()
 
 void ABoss::InitMovementStateToIdle()
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "init movement state to idle!");
 	// Idle로 초기화
 	MovementState = EBossMovementState::Idle;
+
+	if (BossController == nullptr)
+	{
+		return;
+	}
+	BossController->StopMovement();
 
 	// Idle Timer 초기화
 	GetWorldTimerManager().SetTimer(
