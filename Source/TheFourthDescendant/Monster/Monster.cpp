@@ -15,9 +15,7 @@ AMonster::AMonster()
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
-
 	Player = nullptr;
-
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
@@ -72,6 +70,7 @@ float AMonster::TakeDamage(float DamageAmount, struct FDamageEvent const& Damage
 
 void AMonster::Attack()
 {
+	
 }
 
 void AMonster::Move()
