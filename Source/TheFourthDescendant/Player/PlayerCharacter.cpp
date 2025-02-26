@@ -298,7 +298,7 @@ void APlayerCharacter::PlayFootStepSound()
 	{
 		FootStepSound = WalkFootStepSound;
 	}
-	else if (Speed < 600.f)
+	else if (Speed < 650.f)
 	{
 		FootStepSound = RunFootStepSound;
 	}
@@ -349,6 +349,18 @@ void APlayerCharacter::UpdateIsAiming()
 {
 	bIsAiming = bIsManualAiming || bIsShooting;
 	bUseControllerRotationYaw = bIsAiming;
+}
+
+void APlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// 발소리 겹치지 않도록 다음 다음 시간 간격에 재생하도록 한다.
+	LastFootStepTime = GetWorld()->GetTimeSeconds() + FootStepInterval * 1;
+	if (LandSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
+	}
 }
 
 void APlayerCharacter::InitAmmoInventory()

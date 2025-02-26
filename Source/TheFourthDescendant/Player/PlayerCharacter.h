@@ -77,15 +77,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon")
 	TMap<EAmmoType, int32> AmmoInventory;
 
+	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float FootStepInterval;
+	/** 마지막 발소리 재생 시간, 재생 간격을 위한 변수 */
 	float LastFootStepTime;
+	/** 점프 시에 Skip할 발자국 간격, 점프 이후에 바로 발소리가 출력되어서 소리가 겹치는 현상을 방지*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	int OnLandMoveSkipCount;
+	/** 걷기 발소리 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* WalkFootStepSound;
+	/** 뛰기 발소리 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* RunFootStepSound;
+	/** 질주 발소리 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* SprintFootStepSound;
+	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* LandSound;
 	
@@ -127,6 +136,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
 
+	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. */
 	UFUNCTION(BlueprintCallable)
 	void PlayFootStepSound();
 	
@@ -136,6 +146,8 @@ protected:
 
 	/** bIsShooting, bIsRightButtonAiming을 이용해서 최종 Aim 여부를 결정 */
 	void UpdateIsAiming();
+	/** 캐릭터가 착지했을 때 호출되는 함수 */
+	virtual void Landed(const FHitResult& Hit) override;
 
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();
