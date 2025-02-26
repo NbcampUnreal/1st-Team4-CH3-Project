@@ -60,6 +60,7 @@ void AWeaponBase::Reload(int& TotalAmmo)
 		CurrentAmmo += TotalAmmo;
 		TotalAmmo = 0;
 	}
+	OnAmmoChanged.Broadcast(CurrentAmmo);
 	UE_LOG(LogTemp, Warning, TEXT("Total Ammo: %d, Current Ammo: %d"), TotalAmmo, CurrentAmmo);
 }
 
@@ -74,6 +75,8 @@ void AWeaponBase::Attack()
 
 	PerformAttack();
 	CurrentAmmo--;
+	OnAmmoChanged.Broadcast(CurrentAmmo);
+	OnShootTriggered.Broadcast();
 	CurrentRecoilOffset = FMath::Clamp(CurrentRecoilOffset + RecoilAmount, 0.0f, MaxRecoilAmount);
 	
 	// SFX, VFX...
@@ -87,8 +90,6 @@ void AWeaponBase::Attack()
 		// @Improve : Recoil에 따라 카메라 쉐이크의 강도를 강하게 적용하도록 수정
 		GetWorld()->GetFirstPlayerController()->PlayerCameraManager->StartCameraShake(FireCameraShake);
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Attack : Current Ammo: %d"), CurrentAmmo);
 }
 
 void AWeaponBase::PerformAttack()

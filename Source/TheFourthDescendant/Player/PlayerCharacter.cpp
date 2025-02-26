@@ -195,6 +195,8 @@ void APlayerCharacter::IncreaseHealth(const int Amount)
 	
 	Status.Health += Amount;
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseHealth(const int Amount)
@@ -205,6 +207,7 @@ void APlayerCharacter::DecreaseHealth(const int Amount)
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::IncreaseShield(const int Amount)
@@ -213,6 +216,8 @@ void APlayerCharacter::IncreaseShield(const int Amount)
 	
 	Status.Shield += Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseShield(const int Amount)
@@ -221,6 +226,8 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	
 	Status.Shield -= Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -251,6 +258,7 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	
 	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
 	Weapon->SetOwner(this);
+	OnEquipWeapon.Broadcast(Weapon);
 }
 
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
@@ -266,6 +274,8 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 	{
 		AmmoInventory.Add(AmmoType, Amount);
 	}
+
+	OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[AmmoType]);
 }
 
 
@@ -283,6 +293,8 @@ void APlayerCharacter::BeginPlay()
 			Equip(StartWeapon);
 		}
 	}
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -339,6 +351,7 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	{
 		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
+		OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[WeaponAmmoType]);
 	}
 }
 

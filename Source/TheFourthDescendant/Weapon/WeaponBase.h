@@ -6,8 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "WeaponBase.generated.h"
 
-UENUM()
-enum class EAmmoType
+UENUM(BlueprintType)
+enum class EAmmoType : uint8
 {
 	Normal,
 	Speed,
@@ -16,7 +16,7 @@ enum class EAmmoType
 };
 ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 
-UCLASS(Abstract)
+UCLASS(Abstract, BlueprintType)
 class THEFOURTHDESCENDANT_API AWeaponBase : public AActor
 {
 	GENERATED_BODY()
@@ -25,7 +25,7 @@ public:
 	// Sets default values for this actor's properties
 	AWeaponBase();
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int, CurrentAmmo, int, TotalAmmo);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int, CurrentAmmo);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnAmmoChanged OnAmmoChanged;
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
@@ -94,6 +94,9 @@ private:
 public:
 	/** 무기가 사용하는 타입을 반환 */
 	EAmmoType GetAmmoType() const { return AmmoType; }
+	/** 현재 탄약 수를 반환 */
+	UFUNCTION(BlueprintPure)
+	int GetCurrentAmmo() const { return CurrentAmmo; }
 	
 	/** 무기를 발사 */
 	void StartShoot();
