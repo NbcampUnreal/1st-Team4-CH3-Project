@@ -75,7 +75,8 @@ void AWeaponBase::Attack()
 
 	PerformAttack();
 	CurrentAmmo--;
-	OnAmmoChanged.Broadcast(CurrentAmmo);
+	// UI 쪽에서 Shoot Trigger되면 탄약을 갱신하고 있어서 건들지 않는다.
+	// OnAmmoChanged.Broadcast(CurrentAmmo);
 	OnShootTriggered.Broadcast();
 	CurrentRecoilOffset = FMath::Clamp(CurrentRecoilOffset + RecoilAmount, 0.0f, MaxRecoilAmount);
 	
