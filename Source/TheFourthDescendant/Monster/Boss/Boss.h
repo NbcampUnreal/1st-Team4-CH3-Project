@@ -38,6 +38,9 @@ protected:
 	/** 몬스터의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	float AttackPower;
+	/** 보스 회전 속도 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
+	float RotationSpeed;
 	/** 공격 가능 여부 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bCanAttack;
@@ -89,8 +92,12 @@ private:
 public:
 	/** 공격 */
 	void Attack();
-	/** 이동 */
+	/** 전방 이동 */
 	void MoveToTarget();
+	/** 후방 이동 */
+	void MoveBack();
+	/** 플레이어를 향해 회전 */
+	void RotationToTarget(float DeltaSeconds);
 	/** 사망 로직 처리 */
 	void OnDeath();
 	/** 플레이어와 거리를 측정하는 함수 */
