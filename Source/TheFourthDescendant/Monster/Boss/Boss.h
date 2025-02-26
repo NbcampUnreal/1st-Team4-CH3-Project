@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class ABossController;
 class APlayerCharacter;
 class AEnemyController;
 class UBlackboardComponent;
@@ -16,7 +17,8 @@ enum class EBossMovementState : uint8
 {
 	Approaching UMETA(DisplayName = "Approaching"),
 	Surrounding UMETA(DisplayName = "Surrounding"),
-	Backmoving UMETA(DisplayName = "Backmoving"),
+	BackMoving UMETA(DisplayName = "Backmoving"),
+	Idle UMETA(DisplayName = "Idle"),
 };
 
 UCLASS()
@@ -26,6 +28,7 @@ class THEFOURTHDESCENDANT_API ABoss : public ACharacterBase
 
 public:
 	ABoss();
+	
 public:
 	/** 현재 적의 이동 상태 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
@@ -60,7 +63,7 @@ protected:
 	/** 플레이어와 유지하는 최소거리.
 * 후진 상태의 AcceptanceRadius */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
-	float BackmovingAcceptance;
+	float BackMovingAcceptance;
 	/** 플레이어와 유지하는 적정거리. 전진 상태의 AcceptanceRadius */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
 	float ApproachAcceptance;
@@ -80,18 +83,30 @@ private:
 	FTimerHandle MoveTimer;
 	/** Idle 상태의 시간을 측정할 타이머 */
 	FTimerHandle IdleTimer;
+	/** Possess 중인 AAIContoller */
+	ABossController* BossController;
 
 public:
 	/** 공격 */
 	void Attack();
 	/** 이동 */
-	void Move();
+	void MoveToTarget();
 	/** 사망 로직 처리 */
 	void OnDeath();
 	/** 플레이어와 거리를 측정하는 함수 */
 	float GetDistanceToPlayer();
 	/** 거리에 따라 Move 상태 전이 */
 	void SetMoveState();
+	/** 이동 상태로 전이 */
+	void InitMovementStateToMove();
+	/** 상태 초기화 함수.
+	* 스폰 이후 블루프린트에서 호출 */
+	UFUNCTION(BlueprintCallable)
+	void InitMovementStateToIdle();
+	
+private:
+	/** Blackboard의 이동 상태 관련 bool 변수 초기화 */
+	void InitBlackboardMovementFlag(const EBossMovementState State);
 
 protected:
 	virtual void BeginPlay() override;

@@ -2,7 +2,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "TheFourthDescendant/AI/EnemyController/EnemyController.h"
+#include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
@@ -14,7 +14,7 @@ ABoss::ABoss()
 	bIsDead = false;
 	Player = nullptr;
 	MinRadius = 200;
-	BackmovingAcceptance = 400;
+	BackMovingAcceptance = 400;
 	ApproachAcceptance = 600;
 	MaxRadius = 800;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -41,14 +41,14 @@ void ABoss::BeginPlay()
 	}
 
 	// AIController 캐스팅
-	EnemyController = Cast<AEnemyController>(GetController());
-	if (EnemyController == nullptr)
+	BossController = Cast<ABossController>(GetController());
+	if (BossController == nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : AIController Casting Failed !");
 	}
 
 	// 블랙보드 할당
-	Blackboard = EnemyController->GetBlackboardComponent();
+	Blackboard = BossController->GetBlackboardComponent();
 	if (Blackboard == nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : BlackBoard Casting Failed !");
@@ -74,15 +74,9 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 }
 
 
-void ABoss::Move()
+void ABoss::MoveToTarget()
 {
-	// (1) 전진하는 상태
-
-	// (2) 원을 그리며 이동하는 상태
-
-	// (3) 후진하는 상태
-
-	SetMoveState();
+	BossController->MoveToTargetActor(Player);
 }
 
 
@@ -114,10 +108,10 @@ float ABoss::GetDistanceToPlayer()
 	FVector PlayerLocation = Player->GetActorLocation();
 
 	// 거리 계산
-	float Distance = FVector::Dist(PlayerLocation, BossLocation);
+	float Dist = FVector::Dist(PlayerLocation, BossLocation);
 
 	// 거리 값 반환
-	return Distance;
+	return Dist;
 }
 
 
@@ -126,7 +120,8 @@ void ABoss::SetMoveState()
 {
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
-
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Distance: %f"), Distance));
+	
 	switch (MovementState)
 	{
 		// (1) 플레이어에게 전진하는 상태
@@ -148,17 +143,91 @@ void ABoss::SetMoveState()
 			else if (Distance < MinRadius)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Backmoving !");
-				MovementState = EBossMovementState::Backmoving;
+				MovementState = EBossMovementState::BackMoving;
 			}
 			break;
 
 		// (3) 후진하는 상태
-		case EBossMovementState::Backmoving:
-			if (Distance > BackmovingAcceptance)
+		case EBossMovementState::BackMoving:
+			if (Distance > BackMovingAcceptance)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
 				MovementState = EBossMovementState::Surrounding;
 			}
 			break;
+		case EBossMovementState::Idle:
+			break;
 	}
+
+	// blackboard 값 초기화
+	InitBlackboardMovementFlag(MovementState);
+}
+
+void ABoss::InitMovementStateToIdle()
+{
+	// Idle로 초기화
+	MovementState = EBossMovementState::Idle;
+
+	// Idle Timer 초기화
+	GetWorldTimerManager().SetTimer(
+		IdleTimer,
+		this,
+		&ABoss::InitMovementStateToMove,
+		IdleTime,
+		false
+		);
+}
+
+void ABoss::InitMovementStateToMove()
+{
+	// 보스, 플레이어 사이의 거리 계산
+	float Distance = GetDistanceToPlayer();
+
+	// 현재 거리에 따라 상태 초기화
+	if (Distance < MinRadius)
+	{
+		MovementState = EBossMovementState::BackMoving;
+	}
+	else if (MinRadius <= Distance && Distance <= MaxRadius)
+	{
+		MovementState = EBossMovementState::Surrounding;
+	}
+	else
+	{
+		MovementState = EBossMovementState::Approaching;
+	}
+	
+	// Move Timer 초기화
+	GetWorldTimerManager().SetTimer(
+		MoveTimer,
+		this,
+		&ABoss::InitMovementStateToIdle,
+		MoveTime,
+		false
+		);
+}
+
+void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
+{
+	// blackboard의 이동 상태 관련 변수 모두 false로 초기화
+	Blackboard->SetValueAsBool(FName("IsApproaching"), false);
+	Blackboard->SetValueAsBool(FName("IsBackMoving"), false);
+	Blackboard->SetValueAsBool(FName("IsSurrounding"), false);
+
+	// 현재 이동 상태에 대한 변수만 true로 초기화
+	switch (State)
+	{
+		case EBossMovementState::Approaching:
+			Blackboard->SetValueAsBool(FName("IsApproaching"), true);
+			break;
+		case EBossMovementState::Surrounding:
+			Blackboard->SetValueAsBool(FName("IsSurrounding"), true);
+			break;
+		case EBossMovementState::BackMoving:
+			Blackboard->SetValueAsBool(FName("IsBackMoving"), true);
+			break;
+		case EBossMovementState::Idle:
+			break;
+	}
+
 }
