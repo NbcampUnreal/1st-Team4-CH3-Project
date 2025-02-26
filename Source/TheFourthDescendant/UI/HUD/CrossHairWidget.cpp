@@ -16,6 +16,11 @@ void UCrossHairWidget::NativeOnInitialized()
 	CrossHair_R = Cast<UImage>(GetWidgetFromName(TEXT("CrossHair_R")));
 	ensureMsgf(IsValid(CrossHair_R), TEXT("크로스헤어 오른쪽을 찾을 수 없음."));	
 	CrossHair_R->SetRenderTransformAngle(180.f);
+
+	if(GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(UpdateTimer, this, &UCrossHairWidget::MoveCrossHair, 0.01f, true);
+	}
 }
 
 void UCrossHairWidget::Shoot()
@@ -39,7 +44,7 @@ void UCrossHairWidget::MoveCrossHair()
 		return;
 	}
 
-	checkf(0 == MaximumRemainTime, TEXT("MaximumRemainTime은 0이 될 수 없습니다."));
+	checkf(0 != MaximumRemainTime, TEXT("MaximumRemainTime은 0이 될 수 없습니다."));
 	
 	float MoveAlpha = RemainMovingTime / MaximumRemainTime;
 	CurrentMoveDistance = FMath::Lerp(0.f, MaximumMoveDistance, MoveAlpha);
