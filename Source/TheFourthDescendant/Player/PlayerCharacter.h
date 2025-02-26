@@ -76,6 +76,18 @@ protected:
 	/** 총알 소지 개수*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon")
 	TMap<EAmmoType, int32> AmmoInventory;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float FootStepInterval;
+	float LastFootStepTime;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WalkFootStepSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* RunFootStepSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* SprintFootStepSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* LandSound;
 	
 private:
 	/** TPS 카메라 컴포넌트 */
@@ -114,6 +126,9 @@ public:
 	/** 탄약의 총 개수를 반환 */
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
+
+	UFUNCTION(BlueprintCallable)
+	void PlayFootStepSound();
 	
 protected:
 	virtual void BeginPlay() override;

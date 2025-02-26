@@ -5,9 +5,11 @@
 
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
+#include "GameSessionSettings.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -39,6 +41,8 @@ APlayerCharacter::APlayerCharacter()
 
 	ReloadUIUpdateInterval = 0.1f;
 	ReloadElapsedTime = 0.0f;
+
+	FootStepInterval = 0.3f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -278,6 +282,36 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 	OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[AmmoType]);
 }
 
+
+void APlayerCharacter::PlayFootStepSound()
+{
+	if (GetWorld()->GetTimeSeconds() - LastFootStepTime < FootStepInterval)
+	{
+		return;;
+	}
+
+	LastFootStepTime = GetWorld()->GetTimeSeconds();
+	
+	const float Speed = GetVelocity().Size();
+	USoundBase* FootStepSound = nullptr;
+	if (Speed < 250.f)
+	{
+		FootStepSound = WalkFootStepSound;
+	}
+	else if (Speed < 600.f)
+	{
+		FootStepSound = RunFootStepSound;
+	}
+	else
+	{
+		FootStepSound = SprintFootStepSound;
+	}
+
+	if (FootStepSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FootStepSound, GetActorLocation());
+	}
+}
 
 void APlayerCharacter::BeginPlay()
 {
