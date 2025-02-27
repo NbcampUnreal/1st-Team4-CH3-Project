@@ -9,15 +9,25 @@
 #pragma region InitComponent
 ABoss::ABoss()
 {
-	AttackPower = 0;
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
+	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
 	ApproachAcceptance = 600;
 	MaxRadius = 800;
+	SummonPatternInterval = 70;
+	FlameExplosionPatternInterval = 90;
+	RotationSpeed = 40;
+	MoveTime = 180;
+	IdleTime = 5;
+	Player = nullptr;
+	BossController = nullptr;
+	EnemyController = nullptr;
+	Blackboard = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	MovementState = EBossMovementState::Idle;
 }
 
 
@@ -46,7 +56,6 @@ void ABoss::BeginPlay()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : BlackBoard Casting Failed !");
 	}
-
 	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
 
 	// 캐릭터 이동속도 초기화
@@ -55,6 +64,15 @@ void ABoss::BeginPlay()
 	// 체력 및 쉴드 초기화
 	Status.Health = Status.MaxHealth;
 	Status.Shield = Status.MaxShield;
+
+	// 소환 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		SummonPatternTimer,
+		this,
+		&ABoss::SummonPatternStart,
+		SummonPatternInterval,
+		true,
+		SummonPatternInterval);
 }
 #pragma endregion
 
@@ -116,7 +134,7 @@ void ABoss::MoveHorizontal(int32& Direction)
 	// 방향벡터 오른쪽으로 초기화
 	else if (Direction == 1)
 	{
-		DirectionVector = -GetActorRightVector();
+		DirectionVector = GetActorRightVector();
 	}
 
 	AddMovementInput(DirectionVector);
@@ -162,6 +180,25 @@ void ABoss::RotationToTarget(float DeltaSeconds)
 }
 #pragma endregion
 
+#pragma region Attack Pattern
+
+void ABoss::SummonPatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsSummon"), true);
+}
+
+void ABoss::SummonMinions()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
+}
+
+
+#pragma endregion
 
 #pragma region Util
 float ABoss::GetDistanceToPlayer()
@@ -178,7 +215,6 @@ float ABoss::GetDistanceToPlayer()
 }
 
 #pragma endregion
-
 
 #pragma region InitMovementState Functions
 void ABoss::InitMovementStateToIdle()
@@ -235,7 +271,8 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 	Blackboard->SetValueAsBool(FName("IsApproaching"), false);
 	Blackboard->SetValueAsBool(FName("IsBackMoving"), false);
 	Blackboard->SetValueAsBool(FName("IsSurrounding"), false);
-
+	Blackboard->SetValueAsBool(FName("IsMoving"), true);
+	
 	// 현재 이동 상태에 대한 변수만 true로 초기화
 	switch (State)
 	{
@@ -249,6 +286,7 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 			Blackboard->SetValueAsBool(FName("IsBackMoving"), true);
 			break;
 		case EBossMovementState::Idle:
+			Blackboard->SetValueAsBool(FName("IsMoving"), false);
 			break;
 	}
 
