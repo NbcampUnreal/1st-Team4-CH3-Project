@@ -9,15 +9,27 @@
 #pragma region InitComponent
 ABoss::ABoss()
 {
-	AttackPower = 0;
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
+	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
 	ApproachAcceptance = 600;
 	MaxRadius = 800;
+	SummonPatternInterval = 70;
+	FlameExplosionPatternInterval = 90;
+	RotationSpeed = 40;
+	MoveTime = 180;
+	IdleTime = 5;
+	BusterPatternMinDistance = 1050;
+	BusterMinTime = 3;
+	Player = nullptr;
+	BossController = nullptr;
+	EnemyController = nullptr;
+	Blackboard = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	MovementState = EBossMovementState::Idle;
 }
 
 
@@ -46,7 +58,6 @@ void ABoss::BeginPlay()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : BlackBoard Casting Failed !");
 	}
-
 	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
 
 	// 캐릭터 이동속도 초기화
@@ -55,6 +66,24 @@ void ABoss::BeginPlay()
 	// 체력 및 쉴드 초기화
 	Status.Health = Status.MaxHealth;
 	Status.Shield = Status.MaxShield;
+
+	// 소환 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		SummonPatternTimer,
+		this,
+		&ABoss::SummonPatternStart,
+		SummonPatternInterval,
+		true,
+		SummonPatternInterval);
+
+	// 플레임 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		FlamePatternTimer,
+		this,
+		&ABoss::FlamePatternStart,
+		FlameExplosionPatternInterval,
+		true,
+		FlameExplosionPatternInterval);
 }
 #pragma endregion
 
@@ -116,7 +145,7 @@ void ABoss::MoveHorizontal(int32& Direction)
 	// 방향벡터 오른쪽으로 초기화
 	else if (Direction == 1)
 	{
-		DirectionVector = -GetActorRightVector();
+		DirectionVector = GetActorRightVector();
 	}
 
 	AddMovementInput(DirectionVector);
@@ -162,6 +191,63 @@ void ABoss::RotationToTarget(float DeltaSeconds)
 }
 #pragma endregion
 
+#pragma region Attack Pattern
+
+void ABoss::SummonPatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsSummon"), true);
+}
+
+void ABoss::SummonMinions()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
+}
+
+
+
+void ABoss::FlamePatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsFlame"), true);
+}
+
+void ABoss::FlameExplosion()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Flame Explosion");
+}
+
+
+
+void ABoss::BusterPatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsBuster"), true);
+
+	// Buster Timer 초기화
+	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
+	bIsBusterTimerTriggered = false;
+}
+
+void ABoss::Buster()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Buster Explosion");
+}
+
+
+#pragma endregion
 
 #pragma region Util
 float ABoss::GetDistanceToPlayer()
@@ -177,8 +263,42 @@ float ABoss::GetDistanceToPlayer()
 	return Dist;
 }
 
-#pragma endregion
 
+
+void ABoss::IsInBusterBound(float& Distance)
+{
+	// 패턴 인식 거리보다 멀다면 return
+	if (Distance > BusterPatternMinDistance)
+	{
+		// 시간 측정 중이었다면 Timer 초기화
+		if (bIsBusterTimerTriggered)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Init");
+			GetWorldTimerManager().ClearTimer(BusterPatternTimer);
+			bIsBusterTimerTriggered = false;
+		}
+		
+	}
+	else
+	{
+		// 패턴 인식 거리인 경우
+		// 시간 측정 중이 아니었다면 Timer 가동
+		if (!bIsBusterTimerTriggered)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Start");
+			GetWorldTimerManager().SetTimer(
+				BusterPatternTimer,
+				this,
+				&ABoss::BusterPatternStart,
+				BusterMinTime,
+				false
+				);
+
+			bIsBusterTimerTriggered = true;
+		}
+	}
+}
+#pragma endregion
 
 #pragma region InitMovementState Functions
 void ABoss::InitMovementStateToIdle()
@@ -235,7 +355,8 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 	Blackboard->SetValueAsBool(FName("IsApproaching"), false);
 	Blackboard->SetValueAsBool(FName("IsBackMoving"), false);
 	Blackboard->SetValueAsBool(FName("IsSurrounding"), false);
-
+	Blackboard->SetValueAsBool(FName("IsMoving"), true);
+	
 	// 현재 이동 상태에 대한 변수만 true로 초기화
 	switch (State)
 	{
@@ -249,6 +370,7 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 			Blackboard->SetValueAsBool(FName("IsBackMoving"), true);
 			break;
 		case EBossMovementState::Idle:
+			Blackboard->SetValueAsBool(FName("IsMoving"), false);
 			break;
 	}
 
@@ -260,6 +382,8 @@ void ABoss::SetMoveState()
 {
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
+	IsInBusterBound(Distance);
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %f"), Distance));
 	
 	switch (MovementState)
 	{
