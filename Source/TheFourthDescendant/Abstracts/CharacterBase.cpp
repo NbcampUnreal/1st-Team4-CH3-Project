@@ -40,6 +40,9 @@ float ACharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const& 
 		Status.Health += Status.Shield;
 		Status.Shield = 0;
 	}
+
+	DamageDispatcher.Broadcast(Status.Health / static_cast<float>(Status.MaxHealth), Status.Shield / static_cast<float>(Status.MaxShield));
+	
 	return ActualDamage;
 }
 
