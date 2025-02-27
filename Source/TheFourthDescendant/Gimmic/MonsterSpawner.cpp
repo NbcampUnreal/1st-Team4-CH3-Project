@@ -3,7 +3,9 @@
 
 #include "MonsterSpawner.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 #include "TheFourthDescendant/Monster/Melee/MeleeMonster.h"
 #include "TheFourthDescendant/Monster/Ranged/RangedMonster.h"
 
@@ -11,10 +13,10 @@ AMonsterSpawner::AMonsterSpawner()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 8));
-    SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 8));
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 7));
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 6));
+    FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 12));
+    SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 12));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 10));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 10));
 
     Levelindex = 0;
     SpawnInterval = 0.2f;
@@ -41,6 +43,8 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType, const FTransform& SpawnTra
             if (MeleeMonsterClass)
             {
                 NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
+                AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(UGameplayStatics::GetGameState(GetWorld()));
+                MainGameState->OnEnemySpawned();
             }
             break;
 
@@ -48,6 +52,8 @@ void AMonsterSpawner::Spawn(EMonsterType MonsterType, const FTransform& SpawnTra
             if (RangedMonsterClass)
             {
                 NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnTransform.GetLocation(), SpawnTransform.GetRotation().Rotator(), SpawnParams);
+                AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(UGameplayStatics::GetGameState(GetWorld()));
+                MainGameState->OnEnemySpawned();
             }
             break;
 
@@ -108,12 +114,16 @@ void AMonsterSpawner::RandomSpawn(EMonsterType MonsterType)
                     if (MeleeMonsterClass)
                     {
                         NewMonster = GetWorld()->SpawnActor<AMeleeMonster>(MeleeMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+                        AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(UGameplayStatics::GetGameState(GetWorld()));
+                        MainGameState->OnEnemySpawned();
                     }
                     break;
                 case EMonsterType::Ranged:
                     if (RangedMonsterClass)
                     {
                         NewMonster = GetWorld()->SpawnActor<ARangedMonster>(RangedMonsterClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+                        AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(UGameplayStatics::GetGameState(GetWorld()));
+                        MainGameState->OnEnemySpawned();
                     }
                     break;
                 case EMonsterType::Boss:
@@ -211,7 +221,7 @@ void AMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SpawnMonsters(Levelindex);
+	//SpawnMonsters(Levelindex);
 }
 
 

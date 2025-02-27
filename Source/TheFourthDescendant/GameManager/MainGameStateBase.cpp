@@ -1,6 +1,7 @@
 #include "MainGameStateBase.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/Gimmic/MonsterSpawner.h"
 #include "TheFourthDescendant/Monster/Monster.h"
 
 AMainGameStateBase::AMainGameStateBase()
@@ -14,7 +15,17 @@ void AMainGameStateBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StartLevel();
+	// 월드에서 AMonsterSpawner 클래스를 가진 액터를 찾아서 Spawner에 저장
+	AActor* FoundSpawner = UGameplayStatics::GetActorOfClass(GetWorld(), AMonsterSpawner::StaticClass());
+	if (FoundSpawner)
+	{
+		Spawner = Cast<AMonsterSpawner>(FoundSpawner);
+		StartLevel();
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("MonsterSpawner not found!"));
+	}
 }
 
 void AMainGameStateBase::StartLevel()
@@ -26,14 +37,14 @@ void AMainGameStateBase::StartLevel()
 		return;
 	}
 
-	// @To-do Wave에 맞는 몬스터 스폰 로직
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Level %d Wave %d Started !"), CurrentLevelIndex + 1, TempWaveIndex + 1));
+	// 웨이브 전환 간격이 지난 후 몬스터 스폰
+	GetWorldTimerManager().SetTimer(
+		SpawnerTimer,
+		this,
+		&AMainGameStateBase::EnemySpawn,
+		WaveInterval,
+		false);
 	
-	// 스폰된 Enemy 수 반환
-	TArray<AActor*> FoundMonsters;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMonster::StaticClass(), FoundMonsters);
-	SpawnedEnemyCount = FoundMonsters.Num();
-	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("EnemySpawned %d num!"), SpawnedEnemyCount));
 
 	// 델리게이트 등록 (예: 레벨 시작 시 특정 함수 호출)
 	if (LevelEnded.IsValidIndex(CurrentLevelIndex))
@@ -45,19 +56,27 @@ void AMainGameStateBase::StartLevel()
 	}
 }
 
+void AMainGameStateBase::EnemySpawn()
+{
+	// @To-do Wave에 맞는 몬스터 스폰 로직
+	Spawner->SpawnMonsters(TotalWaveCount);
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Level %d Wave %d Started !"), CurrentLevelIndex + 1, TempWaveIndex + 1));
+}
 
 
 void AMainGameStateBase::OnEnemyKilled()
 {
 	// 스폰된 몬스터 수 감소
 	--SpawnedEnemyCount;
-	
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("EnemyKilled ! Current : %d num!"), SpawnedEnemyCount));
+
 	// 몬스터를 모두 처치하지 못 한 경우 return
 	if (SpawnedEnemyCount > 0) return;
 
 	// 다음 웨이브 혹은 레벨로 전환
 	SetNextLevelWaveIndex();
 }
+
 
 
 void AMainGameStateBase::SetNextLevelWaveIndex()
@@ -83,5 +102,14 @@ void AMainGameStateBase::SetNextLevelWaveIndex()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Next Wave !")));
 		++TempWaveIndex;
+		StartLevel();
 	}
+}
+
+
+
+void AMainGameStateBase::OnEnemySpawned()
+{
+	++SpawnedEnemyCount;
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("EnemySpawned %d num!"), SpawnedEnemyCount));
 }
