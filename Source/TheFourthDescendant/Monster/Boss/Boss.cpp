@@ -12,6 +12,10 @@ ABoss::ABoss()
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
+	bIsSummon = false;
+	bIsFlame = false;
+	bIsBuster = false;
+	bIsBusterTimerTriggered = false;
 	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
@@ -28,6 +32,7 @@ ABoss::ABoss()
 	BossController = nullptr;
 	EnemyController = nullptr;
 	Blackboard = nullptr;
+	Mesh = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
 }
@@ -59,6 +64,9 @@ void ABoss::BeginPlay()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : BlackBoard Casting Failed !");
 	}
 	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
+
+	// 스켈레탈 메시 할당
+	Mesh = GetMesh();
 
 	// 캐릭터 이동속도 초기화
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
@@ -191,7 +199,7 @@ void ABoss::RotationToTarget(float DeltaSeconds)
 }
 #pragma endregion
 
-#pragma region Attack Pattern
+#pragma region Special Attack Pattern
 
 void ABoss::SummonPatternStart()
 {
@@ -200,7 +208,8 @@ void ABoss::SummonPatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsSummon"), true);
+	bIsSummon = true;
+	Blackboard->SetValueAsBool(FName("IsSummon"), bIsSummon);
 }
 
 void ABoss::SummonMinions()
@@ -217,7 +226,8 @@ void ABoss::FlamePatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsFlame"), true);
+	bIsFlame = true;
+	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
 void ABoss::FlameExplosion()
@@ -234,7 +244,8 @@ void ABoss::BusterPatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsBuster"), true);
+	bIsBuster = true;
+	Blackboard->SetValueAsBool(FName("IsBuster"), bIsBuster);
 
 	// Buster Timer 초기화
 	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
@@ -246,6 +257,23 @@ void ABoss::Buster()
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Buster Explosion");
 }
 
+#pragma endregion
+
+#pragma region Normal Attack Pattern
+
+void ABoss::SlugShotStart()
+{
+	if (Mesh == nullptr || Player == nullptr) return;
+
+	FVector LeftBoneLocation = Mesh->GetBoneLocation(FName("Bone_L_arm3"));
+	FVector RightBoneLocation = Mesh->GetBoneLocation(FName("Bone_R_arm3"));
+
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	FRotator LeftBoneTargetRotation = (PlayerLocation - LeftBoneLocation).Rotation();
+	FRotator RightBoneTargetRotation = (PlayerLocation - RightBoneLocation).Rotation();
+
+}
 
 #pragma endregion
 

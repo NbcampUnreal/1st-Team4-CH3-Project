@@ -33,7 +33,16 @@ public:
 	/** 현재 적의 이동 상태 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	EBossMovementState MovementState;
-
+	/** 잡몹 소환 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsSummon;
+	/** FlameExplosion 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsFlame;
+	/** Buster 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsBuster;
+	
 protected:
 	/** 몬스터의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
@@ -109,6 +118,8 @@ private:
 	FTimerHandle BusterPatternTimer;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
+	/** Bone 회전을 위한 SkeletalMesh 선언 */
+	USkeletalMeshComponent* Mesh;
 
 public:
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
@@ -126,6 +137,8 @@ public:
 	/** Buster 로직 함수 */
 	UFUNCTION(BlueprintCallable)
 	void Buster();
+	/** SlugShot 패턴 시작을 알리는 함수 */
+	void SlugShotStart();
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
