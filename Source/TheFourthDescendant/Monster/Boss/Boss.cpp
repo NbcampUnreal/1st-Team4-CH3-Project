@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
+#pragma region InitComponent
 ABoss::ABoss()
 {
 	AttackPower = 0;
@@ -55,9 +56,9 @@ void ABoss::BeginPlay()
 	Status.Health = Status.MaxHealth;
 	Status.Shield = Status.MaxShield;
 }
+#pragma endregion
 
-
-
+#pragma region Damage, Death
 float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
                         class AController* EventInstigator, AActor* DamageCauser)
 {
@@ -72,52 +73,6 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 	return ActualDamage;
 }
 
-
-void ABoss::MoveToTarget()
-{
-	// idle 상태라면 움직이지 않음
-	if (MovementState == EBossMovementState::Idle) return;
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Black, FString::Printf(TEXT("Velocity : %f"),  GetVelocity().Length()));
-
-	BossController->MoveToTargetActor(Player);
-}
-
-
-
-void ABoss::MoveBack()
-{
-	// 보스의 후방 벡터 반환
-	FVector ForwardVector = GetActorForwardVector();
-	FVector BackDirection = -(ForwardVector.GetSafeNormal());
-
-	// 뒤로 이동
-	AddMovementInput(BackDirection, 1.0f);
-}
-
-void ABoss::RotationToTarget(float DeltaSeconds)
-{
-	// 보스와 플레이어의 현재 위치를 가져옴
-	FVector BossLocation = GetActorLocation();
-	FVector PlayerLocation = Player->GetActorLocation();
-
-	// 정규화된 방향 벡터 (LookAt 방향)
-	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
-
-	// 목표 회전 각도 계산 (Yaw만 변경)
-	FRotator TargetRotation = Direction.Rotation();
-	TargetRotation.Pitch = 0; // 상하 방향 회전 방지 (Yaw만 적용)
-
-	// 현재 회전 값 가져오기
-	FRotator CurrentRotation = GetActorRotation();
-
-	// DeltaSeconds를 활용한 부드러운 보간
-	FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaSeconds, RotationSpeed);
-
-	// 보스 회전 적용
-	SetActorRotation(NewRotation);
-
-	SetMoveState();
-}
 
 
 void ABoss::OnDeath()
@@ -137,9 +92,78 @@ void ABoss::OnDeath()
 	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
 	MainGameInstance->AddKilledEnemyCount(1);
 }
+#pragma endregion
+
+#pragma region Move Functions
+void ABoss::MoveToTarget()
+{
+	if (Player == nullptr) return;
+
+	// 플레이어 방향으로 전방이동
+	BossController->MoveToTargetActor(Player);
+}
+
+void ABoss::MoveHorizontal(int32& Direction)
+{
+	// 움직일 방향벡터 선언
+	FVector DirectionVector = FVector::ZeroVector;
+	
+	// 방향벡터 왼쪽으로 초기화
+	if (Direction == 0)
+	{
+		DirectionVector = -GetActorRightVector();
+	}
+	// 방향벡터 오른쪽으로 초기화
+	else if (Direction == 1)
+	{
+		DirectionVector = -GetActorRightVector();
+	}
+
+	AddMovementInput(DirectionVector);
+}
 
 
+void ABoss::MoveBack()
+{
+	// 보스의 후방 벡터 반환
+	FVector BackDirection = -GetActorForwardVector();
+	
+	// 뒤로 이동
+	AddMovementInput(BackDirection, 1.0f);
+}
 
+
+void ABoss::RotationToTarget(float DeltaSeconds)
+{
+	if (!Player) return;
+
+	// 보스와 플레이어의 현재 위치를 가져옴
+	FVector BossLocation = GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 정규화된 방향 벡터
+	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
+
+	// 목표 회전 각도 계산 (Yaw만 변경)
+	FRotator TargetRotation = Direction.Rotation();
+	TargetRotation.Pitch = 0;
+
+	// 현재 회전 값 가져오기
+	FRotator CurrentRotation = GetActorRotation();
+
+	// 일정 속도로 회전
+	FRotator NewRotation = FMath::RInterpConstantTo(CurrentRotation, TargetRotation, DeltaSeconds, RotationSpeed);
+
+	// 보스 회전 적용
+	SetActorRotation(NewRotation);
+	
+	// 거리에 따라 보스 이동 모드 설정
+	SetMoveState();
+}
+#pragma endregion
+
+
+#pragma region Util
 float ABoss::GetDistanceToPlayer()
 {
 	// 보스, 플레이어의 거리를 반환
@@ -153,68 +177,17 @@ float ABoss::GetDistanceToPlayer()
 	return Dist;
 }
 
+#pragma endregion
 
 
-void ABoss::SetMoveState()
-{
-	// 보스, 플레이어 사이의 거리 계산
-	float Distance = GetDistanceToPlayer();
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Distance: %f"), Distance));
-	
-	switch (MovementState)
-	{
-		// (1) 플레이어에게 전진하는 상태
-		case EBossMovementState::Approaching:
-			if (Distance < ApproachAcceptance)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
-				MovementState = EBossMovementState::Surrounding;
-			}
-			break;
-
-		// (2) 원을 그리며 이동하는 상태
-		case EBossMovementState::Surrounding:
-			if (Distance > MaxRadius)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Approaching !");
-				MovementState = EBossMovementState::Approaching;
-			}
-			else if (Distance < MinRadius)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Backmoving !");
-				MovementState = EBossMovementState::BackMoving;
-			}
-			break;
-
-		// (3) 후진하는 상태
-		case EBossMovementState::BackMoving:
-			if (Distance > BackMovingAcceptance)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
-				MovementState = EBossMovementState::Surrounding;
-			}
-			break;
-
-		// (4) Idle 상태
-		case EBossMovementState::Idle:
-			break;
-	}
-	
-
-	// blackboard 값 초기화
-	InitBlackboardMovementFlag(MovementState);
-}
-
+#pragma region InitMovementState Functions
 void ABoss::InitMovementStateToIdle()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "init movement state to idle!");
 	// Idle로 초기화
 	MovementState = EBossMovementState::Idle;
 
-	if (BossController == nullptr)
-	{
-		return;
-	}
+	// AI 작동 정지
+	if (BossController == nullptr) return;
 	BossController->StopMovement();
 
 	// Idle Timer 초기화
@@ -280,3 +253,58 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 	}
 
 }
+
+
+
+void ABoss::SetMoveState()
+{
+	// 보스, 플레이어 사이의 거리 계산
+	float Distance = GetDistanceToPlayer();
+	
+	switch (MovementState)
+	{
+		// (1) 플레이어에게 전진하는 상태
+	case EBossMovementState::Approaching:
+		if (Distance < ApproachAcceptance)
+		{
+			// AI 작동 정지
+			if (BossController == nullptr) return;
+			BossController->StopMovement();
+			
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
+			MovementState = EBossMovementState::Surrounding;
+		}
+		break;
+
+		// (2) 원을 그리며 이동하는 상태
+	case EBossMovementState::Surrounding:
+		if (Distance > MaxRadius)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Approaching !");
+			MovementState = EBossMovementState::Approaching;
+		}
+		else if (Distance < MinRadius)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To BackMoving !");
+			MovementState = EBossMovementState::BackMoving;
+		}
+		break;
+
+		// (3) 후진하는 상태
+	case EBossMovementState::BackMoving:
+		if (Distance > BackMovingAcceptance)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
+			MovementState = EBossMovementState::Surrounding;
+		}
+		break;
+
+		// (4) Idle 상태
+	case EBossMovementState::Idle:
+		break;
+	}
+	
+	// blackboard 값 초기화
+	InitBlackboardMovementFlag(MovementState);
+}
+#pragma endregion
