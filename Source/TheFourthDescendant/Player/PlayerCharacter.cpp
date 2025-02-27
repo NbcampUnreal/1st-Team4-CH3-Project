@@ -247,6 +247,7 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	}
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
