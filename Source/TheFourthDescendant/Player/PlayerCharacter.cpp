@@ -383,7 +383,6 @@ void APlayerCharacter::UpdateYawControl()
 	// 이동 중이거나 실제 조준 중일 때는 회전
 	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive))
 	{
-		UE_LOG(LogTemp, Display, TEXT("Aiming : %d, UpperBody : %d"), bIsAiming, bIsUpperBodyActive);
 		bUseControllerRotationYaw = true;
 	}
 	else
