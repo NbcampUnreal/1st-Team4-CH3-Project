@@ -42,13 +42,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	float RotationSpeed;
 	/** 공격 가능 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bCanAttack;
 	/** 스폰 애니메이션이 종료 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bIsSpawned;
 	/** 사망 여부 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Locomotion")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Locomotion")
 	bool bIsDead;
 	/** 공격할 대상 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Target")
@@ -80,18 +80,35 @@ protected:
 	/** Idle 상태를 유지할 시간 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
 	int32 IdleTime;
+	/** 잡몹 패턴 간격 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
+	int32 SummonPatternInterval;
+	/** 하늘로 미사일 발사하는 패턴 간격 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
+	int32 FlameExplosionPatternInterval;
 
 private:
 	/** Move 상태의 시간을 측정할 타이머 */
 	FTimerHandle MoveTimer;
 	/** Idle 상태의 시간을 측정할 타이머 */
 	FTimerHandle IdleTimer;
+	/** Summon 패턴을 측정할 타이머 */
+	FTimerHandle SummonPatternTimer;
+	/** Summon 패턴 활성화 여부 */
+	FTimerHandle bIsSummonPatternActivate;
+	/** Flame 패턴을 측정할 타이머 */
+	FTimerHandle FlamePatternTimer;
+	/** Flame 패턴 활성화 여부 */
+	FTimerHandle bIsFlamePatternActivate;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
 
 public:
-	/** 공격 */
-	void Attack();
+	/** 잡몹 소환 패턴 시작을 알리는 함수 */
+	void SummonPatternStart();
+	/** 잡몹 소환 로직 함수 */
+	UFUNCTION(BlueprintCallable)
+	void SummonMinions();
 	/** 전방 이동 */
 	void MoveToTarget();
 	/** 좌우 이동 */
