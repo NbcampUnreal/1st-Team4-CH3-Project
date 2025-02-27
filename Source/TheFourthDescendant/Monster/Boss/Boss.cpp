@@ -73,6 +73,15 @@ void ABoss::BeginPlay()
 		SummonPatternInterval,
 		true,
 		SummonPatternInterval);
+
+	// 플레임 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		FlamePatternTimer,
+		this,
+		&ABoss::FlamePatternStart,
+		FlameExplosionPatternInterval,
+		true,
+		FlameExplosionPatternInterval);
 }
 #pragma endregion
 
@@ -195,6 +204,23 @@ void ABoss::SummonPatternStart()
 void ABoss::SummonMinions()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
+}
+
+
+
+void ABoss::FlamePatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsFlame"), true);
+}
+
+void ABoss::FlameExplosion()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Flame Explosion");
 }
 
 

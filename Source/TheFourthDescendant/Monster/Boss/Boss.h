@@ -94,12 +94,8 @@ private:
 	FTimerHandle IdleTimer;
 	/** Summon 패턴을 측정할 타이머 */
 	FTimerHandle SummonPatternTimer;
-	/** Summon 패턴 활성화 여부 */
-	FTimerHandle bIsSummonPatternActivate;
 	/** Flame 패턴을 측정할 타이머 */
 	FTimerHandle FlamePatternTimer;
-	/** Flame 패턴 활성화 여부 */
-	FTimerHandle bIsFlamePatternActivate;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
 
@@ -109,6 +105,11 @@ public:
 	/** 잡몹 소환 로직 함수 */
 	UFUNCTION(BlueprintCallable)
 	void SummonMinions();
+	/** Flame 패턴 시작을 알리는 함수 */
+	void FlamePatternStart();
+	/** Flame 로직 함수 */
+	UFUNCTION(BlueprintCallable)
+	void FlameExplosion();
 	/** 전방 이동 */
 	void MoveToTarget();
 	/** 좌우 이동 */
