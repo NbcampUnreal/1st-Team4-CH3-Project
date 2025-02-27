@@ -94,6 +94,8 @@ public:
 	void Attack();
 	/** 전방 이동 */
 	void MoveToTarget();
+	/** 좌우 이동 */
+	void MoveHorizontal(int32& Direction);
 	/** 후방 이동 */
 	void MoveBack();
 	/** 플레이어를 향해 회전 */
