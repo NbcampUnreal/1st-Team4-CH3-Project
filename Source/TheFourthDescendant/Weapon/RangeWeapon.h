@@ -15,6 +15,7 @@ public:
 	// Sets default values for this actor's properties
 	ARangeWeapon();
 
+	static const int DefaultRayLength;
 protected:
-	virtual void PerformAttack() override;
+	virtual FShootResult PerformAttack() override;
 };

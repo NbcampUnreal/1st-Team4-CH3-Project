@@ -5,6 +5,11 @@
 
 #include "Kismet/GameplayStatics.h"
 
+FShootResult::FShootResult()
+{
+	bShouldHitMarkerOn = false;
+}
+
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
@@ -16,6 +21,8 @@ AWeaponBase::AWeaponBase()
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(Root);
 
+	bCanFire = true;
+	
 	WeaponAttackPower = 10;
 	FireInterval = 0.2f;
 	RecoilAmount = 2.0f;
@@ -36,13 +43,10 @@ void AWeaponBase::Tick(float DeltaSeconds)
 
 void AWeaponBase::StartShoot()
 {
-	// To-Do : 피격 시에 총알이 발사되지 않도록 처리
-	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::Attack, FireInterval, true);
-}
-
-void AWeaponBase::StopShoot()
-{
-	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+	if (bCanFire && CurrentAmmo > 0)
+	{
+		Attack();
+	}
 }
 
 void AWeaponBase::Reload(int& TotalAmmo)
@@ -60,6 +64,7 @@ void AWeaponBase::Reload(int& TotalAmmo)
 		CurrentAmmo += TotalAmmo;
 		TotalAmmo = 0;
 	}
+	OnAmmoChanged.Broadcast(CurrentAmmo);
 	UE_LOG(LogTemp, Warning, TEXT("Total Ammo: %d, Current Ammo: %d"), TotalAmmo, CurrentAmmo);
 }
 
@@ -68,13 +73,21 @@ void AWeaponBase::Attack()
 {
 	if (CurrentAmmo <= 0)
 	{
-		StopShoot();
 		return;
 	}
 
-	PerformAttack();
+	// 공격 실행, 탄환 처리, 반동 처리
+	const FShootResult ShootResult = PerformAttack();
 	CurrentAmmo--;
 	CurrentRecoilOffset = FMath::Clamp(CurrentRecoilOffset + RecoilAmount, 0.0f, MaxRecoilAmount);
+
+	// 발사 간격을 설정하고 발사가 불가능하도록 설정
+	bCanFire = false;
+	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::OnCooldownFinished, FireInterval, false);
+	
+	// UI 쪽에서 Shoot Trigger되면 탄약을 갱신하고 있어서 건들지 않는다.
+	// OnAmmoChanged.Broadcast(CurrentAmmo);
+	OnShootTriggered.Broadcast(ShootResult);
 	
 	// SFX, VFX...
 	if (FireSfx)
@@ -87,13 +100,17 @@ void AWeaponBase::Attack()
 		// @Improve : Recoil에 따라 카메라 쉐이크의 강도를 강하게 적용하도록 수정
 		GetWorld()->GetFirstPlayerController()->PlayerCameraManager->StartCameraShake(FireCameraShake);
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Attack : Current Ammo: %d"), CurrentAmmo);
 }
 
-void AWeaponBase::PerformAttack()
+void AWeaponBase::OnCooldownFinished()
+{
+	bCanFire = true;
+}
+
+FShootResult AWeaponBase::PerformAttack()
 {
 	// 세부적인 공격 구현은 상속 받은 클래스에서 구현한다.
+	return FShootResult();
 }
 
 void AWeaponBase::ApplyRecoil(float DeltaTime)

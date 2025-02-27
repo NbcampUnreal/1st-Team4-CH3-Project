@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -16,7 +17,7 @@ const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArmComponent->SetupAttachment(RootComponent);
@@ -36,9 +37,18 @@ APlayerCharacter::APlayerCharacter()
 	bIsShooting = false;
 	bIsManualAiming = false;
 	bIsReloading = false;
+	bIsMoving = false;
+	NormalSpringArmLength = 280.0f;
+	AimSpringArmLength = 80.0f;
+	ZoomInterpSpeed = 5.0f;
+	
+	bIsUpperBodyActive = false;
+	bIsOnAttackAnimState = false;
 
 	ReloadUIUpdateInterval = 0.1f;
 	ReloadElapsedTime = 0.0f;
+
+	FootStepInterval = 0.3f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -189,12 +199,23 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
+void APlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	UpdateIsAiming();
+	UpdateYawControl();
+	UpdateCameraArmLength(DeltaSeconds);	
+}
+
 void APlayerCharacter::IncreaseHealth(const int Amount)
 {
 	if (Amount <= 0) return;
 	
 	Status.Health += Amount;
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseHealth(const int Amount)
@@ -205,6 +226,7 @@ void APlayerCharacter::DecreaseHealth(const int Amount)
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::IncreaseShield(const int Amount)
@@ -213,6 +235,8 @@ void APlayerCharacter::IncreaseShield(const int Amount)
 	
 	Status.Shield += Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseShield(const int Amount)
@@ -221,6 +245,8 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	
 	Status.Shield -= Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -235,6 +261,7 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	}
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -251,6 +278,8 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	
 	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
 	Weapon->SetOwner(this);
+	bIsOnAttackAnimState = false;
+	OnEquipWeapon.Broadcast(Weapon);
 }
 
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
@@ -266,14 +295,47 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 	{
 		AmmoInventory.Add(AmmoType, Amount);
 	}
+
+	OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[AmmoType]);
 }
 
+
+void APlayerCharacter::PlayFootStepSound()
+{
+	if (GetWorld()->GetTimeSeconds() - LastFootStepTime < FootStepInterval)
+	{
+		return;;
+	}
+
+	LastFootStepTime = GetWorld()->GetTimeSeconds();
+	
+	const float Speed = GetVelocity().Size();
+	USoundBase* FootStepSound = nullptr;
+	if (Speed < 250.f)
+	{
+		FootStepSound = WalkFootStepSound;
+	}
+	else if (Speed < 650.f)
+	{
+		FootStepSound = RunFootStepSound;
+	}
+	else
+	{
+		FootStepSound = SprintFootStepSound;
+	}
+
+	if (FootStepSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FootStepSound, GetActorLocation());
+	}
+}
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
 	InitAmmoInventory();
 	if (StartWeaponClass)
@@ -283,6 +345,8 @@ void APlayerCharacter::BeginPlay()
 			Equip(StartWeapon);
 		}
 	}
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -301,8 +365,82 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 
 void APlayerCharacter::UpdateIsAiming()
 {
-	bIsAiming = bIsManualAiming || bIsShooting;
-	bUseControllerRotationYaw = bIsAiming;
+	if (CurrentWeapon)
+	{
+		bIsAiming = bIsManualAiming || bIsShooting;	
+	}
+	else
+	{
+		bIsAiming = false;
+	}
+}
+
+void APlayerCharacter::UpdateYawControl()
+{
+	// 상태가 많아지면서 if문이 증가하고 있다. State Machine에서 어떻게 처리할 수 있을지에 대해서 고민할 필요가 있다.
+	// 현재의 난관은 이동하면서 다른 동작이 가능해서 State를 명확하게 표현하기 어렵다는 점이고 Animation이나 다른 것에서 상태 전이를 해야 된다는 점이다.
+
+	// 이동 중이거나 실제 조준 중일 때는 회전
+	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive))
+	{
+		bUseControllerRotationYaw = true;
+	}
+	else
+	{
+		bUseControllerRotationYaw = false;
+	}
+}
+
+void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
+{
+	if (bIsManualAiming && !bIsUpperBodyActive)
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, AimSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
+	}
+	else
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, NormalSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
+	}
+}
+
+void APlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// 발소리 겹치지 않도록 다음 다음 시간 간격에 재생하도록 한다.
+	LastFootStepTime = GetWorld()->GetTimeSeconds() + FootStepInterval * 1;
+	if (LandSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
+	}
+}
+
+bool APlayerCharacter::CanFire() const
+{
+	if (!CurrentWeapon || !bIsOnAttackAnimState) return false;
+	if (bIsUpperBodyActive) return false;
+
+	// !!! Warning
+	// 원래라면 이 부분은 애니메이션 슬롯을 확인해서 작동해야 한다.
+	// 하지만, 이렇게 하면 애니메이션 몽타주 종료 시점을 확인할 방법이 없다.
+	// 이러한 구현의 사이드 이펙트는 Open Close Principle을 어기기 때문에 새로운 상태가 추가될 떄마다 여기가 갱신이 되어야 한다.
+	// 이를 일단은 개선하기로 한다.
+	// IsUpperBodyActive를 선언하고 다른 모션은 State라고 생각을 하고 State로 들어간다고 가정한다.
+	// State에서의 진입 조건은 IsUpperBodyActive가 false일 때이다.
+	// 이렇게 하면 각각 상태가 단일하게 존재할 수 있고 상태만 IsUpperBodyActive만 체크하면 되서 확장에 대응할 수 있게 된다.
+	// 하지만, 이것은 간의적으로 FSM을 사용하는 것이므로 리펙토링에서 FSM 사용을 고려할 필요가 있다.
+
+	// 재장전 모션 추적에서와 같이 Montage가 완전이 FadeOut되는 것을 확인할 수 없다.
+	// 현재 재장전 모션 추적에서 사용되고 있는 것을 이용한다.
+	// if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	// {
+	// 	if (AnimInstance->IsSlotActive(FName("UpperBody")))
+	// 	{
+	// 		return false;
+	// 	}
+	// }
+
+	return true;
 }
 
 void APlayerCharacter::InitAmmoInventory()
@@ -334,11 +472,15 @@ void APlayerCharacter::OnReloadUIUpdate()
 
 void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	bIsReloading = false;
+	bIsUpperBodyActive = false;
+	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
 	if (CurrentWeapon)
 	{
 		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
+		OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[WeaponAmmoType]);
 	}
 }
 
@@ -353,6 +495,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	const FVector ForwardVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::X);
 	const FVector RightVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::Y);
 
+	// 전후 이동
 	if (!FMath::IsNearlyZero(MoveInput.X))
 	{
 		AddMovementInput(ForwardVector, MoveInput.X);
@@ -367,17 +510,18 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 			GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 		}
 	}
+	// 좌우 이동
 	if (!FMath::IsNearlyZero(MoveInput.Y))
 	{
 		AddMovementInput(RightVector, MoveInput.Y);
 	}
 
-	bUseControllerRotationYaw = true;
+	bIsMoving = true;
 }
 
 void APlayerCharacter::StopMove(const FInputActionValue& Value)
 {
-	bUseControllerRotationYaw = false;
+	bIsMoving = false;
 }
 
 void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
@@ -439,18 +583,15 @@ void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
-	if (CurrentWeapon)
-	{
-		bIsShooting = true;
-		CurrentWeapon->StartShoot();
-	}
-	UpdateIsAiming();
+	bIsShooting = true;
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
-	
+	if (CurrentWeapon && CanFire())
+	{
+		CurrentWeapon->StartShoot();
+	}
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
@@ -458,33 +599,20 @@ void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsShooting = false;
-	if (CurrentWeapon)
-	{
-		CurrentWeapon->StopShoot();
-	}
-	UpdateIsAiming();
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	// 무기가 없을 경우 Aim되어서는 안 된다.
-	if (CurrentWeapon)
-	{
-		bIsManualAiming = true;
-		bUseControllerRotationYaw = true;
-	}
-	UpdateIsAiming();
+	bIsManualAiming = true;
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
-
+	
 	bIsManualAiming = false;
-	bUseControllerRotationYaw = false;
-	UpdateIsAiming();
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)
@@ -492,6 +620,9 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 	// 상태가 많아지고 있다. FSM 사용을 고려할 것
 	if (!Controller || !CurrentWeapon || bIsReloading) return;
 	if (CurrentWeapon->IsMagazineFull() || AmmoInventory[CurrentWeapon->GetAmmoType()] <= 0) return;
+
+	bIsReloading = true;
+	bIsUpperBodyActive = true;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();

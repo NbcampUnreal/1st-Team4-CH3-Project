@@ -4,6 +4,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "MainGameStateBase.generated.h"
 
+class AMonsterSpawner;
 DECLARE_MULTICAST_DELEGATE(FLevelEnded);
 
 UCLASS()
@@ -32,6 +33,17 @@ public:
 	int32 SpawnedEnemyCount;
 	/** 레벨 전환 시 호출될 델리게이트 함수 */
 	TArray<FLevelEnded> LevelEnded;
+	/** 레벨에서 사용할 몬스터 스포너 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Level")
+	AMonsterSpawner* Spawner;
+	/** 웨이브 전환 간격 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
+	float WaveInterval;
+	
+
+private:
+	/** 스포너에 사용할 타이머 핸들러 */
+	FTimerHandle SpawnerTimer;
 
 
 public:
@@ -39,10 +51,17 @@ public:
  	/** 레벨을 시작하는 함수 */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void StartLevel();
+	/** 스폰 시작하는 함수 */
+	UFUNCTION(BlueprintCallable, Category = "Level")
+	void EnemySpawn();
 	/** 레벨과 웨이브 Index를 설정 */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void SetNextLevelWaveIndex();
 	/** 몬스터 처치 시 호출하는 함수 */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void OnEnemyKilled();
+	/** 몬스터 스폰 시 호출하는 함수 */
+	UFUNCTION(BlueprintCallable, Category = "Level")
+	void OnEnemySpawned();
+	
 };
