@@ -32,6 +32,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnTotalAmmoChanged OnTotalAmmoChanged;
 
+	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
+	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
+	bool bIsOnAttackAnimState; 
 protected:
 	
 	/** 달리기 속도 */
@@ -56,6 +59,8 @@ protected:
 	/** 재장중인지 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsReloading;
+	/** UpperBody Slot에서 몽타주 재생 여부 */
+	bool bIsUpperBodyActive;
 
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
@@ -148,6 +153,8 @@ protected:
 	void UpdateIsAiming();
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
+	/** 사격 가능 여부를 확인*/
+	bool CanFire() const;
 
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();

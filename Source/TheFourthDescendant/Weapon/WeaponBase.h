@@ -39,6 +39,10 @@ protected:
 	/** 발사 소켓 이름을 반환 */
 	FString GetFireSocketName() const { return FireSocketName; }
 
+	/** 사격 가능 여부 */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Weapon|Fire")
+	bool bCanFire;
+	
 	/** 무기가 사용하는 탄약 타입 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	EAmmoType AmmoType;
@@ -100,8 +104,6 @@ public:
 	
 	/** 무기를 발사 */
 	void StartShoot();
-	/** 무기 발사 중지 */
-	void StopShoot();
 	/** 탄약 재장전, 총 탄환 수는 호출 후에 갱신된다. */
 	void Reload(int& TotalAmmo);
 	/** 재장전 애니메이션 몽타주 반환 */
@@ -117,6 +119,9 @@ protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */
 	UFUNCTION()
 	void Attack();
+	/** 쿨타임 종료 타이머*/
+	UFUNCTION()
+	void OnCooldownFinished();
 
 	/** 공격 실행, 실질적인 공격을 발생 */
 	virtual void PerformAttack();
