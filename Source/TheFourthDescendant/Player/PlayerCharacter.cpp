@@ -17,7 +17,7 @@ const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArmComponent->SetupAttachment(RootComponent);
@@ -37,6 +37,11 @@ APlayerCharacter::APlayerCharacter()
 	bIsShooting = false;
 	bIsManualAiming = false;
 	bIsReloading = false;
+	bIsMoving = false;
+	NormalSpringArmLength = 280.0f;
+	AimSpringArmLength = 80.0f;
+	ZoomInterpSpeed = 5.0f;
+	
 	bIsUpperBodyActive = false;
 	bIsOnAttackAnimState = false;
 
@@ -194,6 +199,15 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
+void APlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	UpdateIsAiming();
+	UpdateYawControl();
+	UpdateCameraArmLength(DeltaSeconds);	
+}
+
 void APlayerCharacter::IncreaseHealth(const int Amount)
 {
 	if (Amount <= 0) return;
@@ -247,6 +261,7 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	}
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -320,6 +335,7 @@ void APlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
 	InitAmmoInventory();
 	if (StartWeaponClass)
@@ -349,8 +365,42 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 
 void APlayerCharacter::UpdateIsAiming()
 {
-	bIsAiming = bIsManualAiming || bIsShooting;
-	bUseControllerRotationYaw = bIsAiming;
+	if (CurrentWeapon)
+	{
+		bIsAiming = bIsManualAiming || bIsShooting;	
+	}
+	else
+	{
+		bIsAiming = false;
+	}
+}
+
+void APlayerCharacter::UpdateYawControl()
+{
+	// 상태가 많아지면서 if문이 증가하고 있다. State Machine에서 어떻게 처리할 수 있을지에 대해서 고민할 필요가 있다.
+	// 현재의 난관은 이동하면서 다른 동작이 가능해서 State를 명확하게 표현하기 어렵다는 점이고 Animation이나 다른 것에서 상태 전이를 해야 된다는 점이다.
+
+	// 이동 중이거나 실제 조준 중일 때는 회전
+	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive))
+	{
+		bUseControllerRotationYaw = true;
+	}
+	else
+	{
+		bUseControllerRotationYaw = false;
+	}
+}
+
+void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
+{
+	if (bIsManualAiming && !bIsUpperBodyActive)
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, AimSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
+	}
+	else
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, NormalSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
+	}
 }
 
 void APlayerCharacter::Landed(const FHitResult& Hit)
@@ -445,6 +495,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	const FVector ForwardVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::X);
 	const FVector RightVector = FRotationMatrix(ControllerRotator).GetUnitAxis(EAxis::Y);
 
+	// 전후 이동
 	if (!FMath::IsNearlyZero(MoveInput.X))
 	{
 		AddMovementInput(ForwardVector, MoveInput.X);
@@ -459,17 +510,18 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 			GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 		}
 	}
+	// 좌우 이동
 	if (!FMath::IsNearlyZero(MoveInput.Y))
 	{
 		AddMovementInput(RightVector, MoveInput.Y);
 	}
 
-	bUseControllerRotationYaw = true;
+	bIsMoving = true;
 }
 
 void APlayerCharacter::StopMove(const FInputActionValue& Value)
 {
-	bUseControllerRotationYaw = false;
+	bIsMoving = false;
 }
 
 void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
@@ -532,7 +584,6 @@ void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsShooting = true;
-	UpdateIsAiming();
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
@@ -548,20 +599,13 @@ void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsShooting = false;
-	UpdateIsAiming();
 }
 
 void APlayerCharacter::StartAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	// 무기가 없을 경우 Aim되어서는 안 된다.
-	if (CurrentWeapon)
-	{
-		bIsManualAiming = true;
-		bUseControllerRotationYaw = true;
-	}
-	UpdateIsAiming();
+	bIsManualAiming = true;
 }
 
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
@@ -569,8 +613,6 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 	if (!Controller) return;
 	
 	bIsManualAiming = false;
-	bUseControllerRotationYaw = false;
-	UpdateIsAiming();
 }
 
 void APlayerCharacter::Reload(const FInputActionValue& Value)

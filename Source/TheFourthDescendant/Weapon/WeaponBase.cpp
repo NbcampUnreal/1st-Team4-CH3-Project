@@ -5,6 +5,11 @@
 
 #include "Kismet/GameplayStatics.h"
 
+FShootResult::FShootResult()
+{
+	bShouldHitMarkerOn = false;
+}
+
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
@@ -72,7 +77,7 @@ void AWeaponBase::Attack()
 	}
 
 	// 공격 실행, 탄환 처리, 반동 처리
-	PerformAttack();
+	const FShootResult ShootResult = PerformAttack();
 	CurrentAmmo--;
 	CurrentRecoilOffset = FMath::Clamp(CurrentRecoilOffset + RecoilAmount, 0.0f, MaxRecoilAmount);
 
@@ -82,7 +87,7 @@ void AWeaponBase::Attack()
 	
 	// UI 쪽에서 Shoot Trigger되면 탄약을 갱신하고 있어서 건들지 않는다.
 	// OnAmmoChanged.Broadcast(CurrentAmmo);
-	OnShootTriggered.Broadcast();
+	OnShootTriggered.Broadcast(ShootResult);
 	
 	// SFX, VFX...
 	if (FireSfx)
@@ -102,9 +107,10 @@ void AWeaponBase::OnCooldownFinished()
 	bCanFire = true;
 }
 
-void AWeaponBase::PerformAttack()
+FShootResult AWeaponBase::PerformAttack()
 {
 	// 세부적인 공격 구현은 상속 받은 클래스에서 구현한다.
+	return FShootResult();
 }
 
 void AWeaponBase::ApplyRecoil(float DeltaTime)
