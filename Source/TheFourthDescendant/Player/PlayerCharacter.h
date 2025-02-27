@@ -5,11 +5,10 @@
 #include "CoreMinimal.h"
 #include "InputActionValue.h"
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
+#include "TheFourthDescendant/Weapon/WeaponBase.h"
 #include "PlayerCharacter.generated.h"
 
-class AWeaponBase;
 struct FInputActionValue;
-enum class EAmmoType;
 
 UCLASS()
 class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
@@ -21,12 +20,21 @@ public:
 
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthAndShieldChanged, int, Health, int, Shield);
+	/** 체력이나 실드가 변경되었을 때 호출되는 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnHealthAndShieldChanged OnHealthAndShieldChanged;
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipWeapon, AWeaponBase*, Weapon);
+	/** 무기가 변경되었을 때 호출되는 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnEquipWeapon OnEquipWeapon;
-	
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTotalAmmoChanged, EAmmoType, AmmoType, int, TotalAmmo);
+	/** 최대 탄약이 변경되었을 때 호출되는 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnTotalAmmoChanged OnTotalAmmoChanged;
+
+	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
+	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
+	bool bIsOnAttackAnimState; 
 protected:
 	
 	/** 달리기 속도 */
@@ -51,6 +59,8 @@ protected:
 	/** 재장중인지 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsReloading;
+	/** UpperBody Slot에서 몽타주 재생 여부 */
+	bool bIsUpperBodyActive;
 
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
@@ -60,7 +70,7 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AWeaponBase> StartWeaponClass;
 	/** 현재 장착된 무기 */
-	UPROPERTY()
+	UPROPERTY(Transient, BlueprintReadOnly)
 	AWeaponBase* CurrentWeapon;
 	/** 재장전 UI를 업데이트 할 Timer의 핸들 */
 	FTimerHandle ReloadUIUpdateTimerHandle;
@@ -71,6 +81,27 @@ protected:
 	/** 총알 소지 개수*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon")
 	TMap<EAmmoType, int32> AmmoInventory;
+
+	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float FootStepInterval;
+	/** 마지막 발소리 재생 시간, 재생 간격을 위한 변수 */
+	float LastFootStepTime;
+	/** 점프 시에 Skip할 발자국 간격, 점프 이후에 바로 발소리가 출력되어서 소리가 겹치는 현상을 방지*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	int OnLandMoveSkipCount;
+	/** 걷기 발소리 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WalkFootStepSound;
+	/** 뛰기 발소리 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* RunFootStepSound;
+	/** 질주 발소리 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* SprintFootStepSound;
+	/** 착지 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* LandSound;
 	
 private:
 	/** TPS 카메라 컴포넌트 */
@@ -106,6 +137,13 @@ public:
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)
 	void AddAmmo(EAmmoType AmmoType, int Amount);
+	/** 탄약의 총 개수를 반환 */
+	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
+	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
+
+	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. */
+	UFUNCTION(BlueprintCallable)
+	void PlayFootStepSound();
 	
 protected:
 	virtual void BeginPlay() override;
@@ -113,6 +151,10 @@ protected:
 
 	/** bIsShooting, bIsRightButtonAiming을 이용해서 최종 Aim 여부를 결정 */
 	void UpdateIsAiming();
+	/** 캐릭터가 착지했을 때 호출되는 함수 */
+	virtual void Landed(const FHitResult& Hit) override;
+	/** 사격 가능 여부를 확인*/
+	bool CanFire() const;
 
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();

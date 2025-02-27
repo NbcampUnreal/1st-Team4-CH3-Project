@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -36,9 +37,13 @@ APlayerCharacter::APlayerCharacter()
 	bIsShooting = false;
 	bIsManualAiming = false;
 	bIsReloading = false;
+	bIsUpperBodyActive = false;
+	bIsOnAttackAnimState = false;
 
 	ReloadUIUpdateInterval = 0.1f;
 	ReloadElapsedTime = 0.0f;
+
+	FootStepInterval = 0.3f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -195,6 +200,8 @@ void APlayerCharacter::IncreaseHealth(const int Amount)
 	
 	Status.Health += Amount;
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseHealth(const int Amount)
@@ -205,6 +212,7 @@ void APlayerCharacter::DecreaseHealth(const int Amount)
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::IncreaseShield(const int Amount)
@@ -213,6 +221,8 @@ void APlayerCharacter::IncreaseShield(const int Amount)
 	
 	Status.Shield += Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::DecreaseShield(const int Amount)
@@ -221,6 +231,8 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	
 	Status.Shield -= Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -251,6 +263,8 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	
 	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
 	Weapon->SetOwner(this);
+	bIsOnAttackAnimState = false;
+	OnEquipWeapon.Broadcast(Weapon);
 }
 
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
@@ -266,8 +280,40 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 	{
 		AmmoInventory.Add(AmmoType, Amount);
 	}
+
+	OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[AmmoType]);
 }
 
+
+void APlayerCharacter::PlayFootStepSound()
+{
+	if (GetWorld()->GetTimeSeconds() - LastFootStepTime < FootStepInterval)
+	{
+		return;;
+	}
+
+	LastFootStepTime = GetWorld()->GetTimeSeconds();
+	
+	const float Speed = GetVelocity().Size();
+	USoundBase* FootStepSound = nullptr;
+	if (Speed < 250.f)
+	{
+		FootStepSound = WalkFootStepSound;
+	}
+	else if (Speed < 650.f)
+	{
+		FootStepSound = RunFootStepSound;
+	}
+	else
+	{
+		FootStepSound = SprintFootStepSound;
+	}
+
+	if (FootStepSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FootStepSound, GetActorLocation());
+	}
+}
 
 void APlayerCharacter::BeginPlay()
 {
@@ -283,6 +329,8 @@ void APlayerCharacter::BeginPlay()
 			Equip(StartWeapon);
 		}
 	}
+
+	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -303,6 +351,46 @@ void APlayerCharacter::UpdateIsAiming()
 {
 	bIsAiming = bIsManualAiming || bIsShooting;
 	bUseControllerRotationYaw = bIsAiming;
+}
+
+void APlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// 발소리 겹치지 않도록 다음 다음 시간 간격에 재생하도록 한다.
+	LastFootStepTime = GetWorld()->GetTimeSeconds() + FootStepInterval * 1;
+	if (LandSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
+	}
+}
+
+bool APlayerCharacter::CanFire() const
+{
+	if (!CurrentWeapon || !bIsOnAttackAnimState) return false;
+	if (bIsUpperBodyActive) return false;
+
+	// !!! Warning
+	// 원래라면 이 부분은 애니메이션 슬롯을 확인해서 작동해야 한다.
+	// 하지만, 이렇게 하면 애니메이션 몽타주 종료 시점을 확인할 방법이 없다.
+	// 이러한 구현의 사이드 이펙트는 Open Close Principle을 어기기 때문에 새로운 상태가 추가될 떄마다 여기가 갱신이 되어야 한다.
+	// 이를 일단은 개선하기로 한다.
+	// IsUpperBodyActive를 선언하고 다른 모션은 State라고 생각을 하고 State로 들어간다고 가정한다.
+	// State에서의 진입 조건은 IsUpperBodyActive가 false일 때이다.
+	// 이렇게 하면 각각 상태가 단일하게 존재할 수 있고 상태만 IsUpperBodyActive만 체크하면 되서 확장에 대응할 수 있게 된다.
+	// 하지만, 이것은 간의적으로 FSM을 사용하는 것이므로 리펙토링에서 FSM 사용을 고려할 필요가 있다.
+
+	// 재장전 모션 추적에서와 같이 Montage가 완전이 FadeOut되는 것을 확인할 수 없다.
+	// 현재 재장전 모션 추적에서 사용되고 있는 것을 이용한다.
+	// if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	// {
+	// 	if (AnimInstance->IsSlotActive(FName("UpperBody")))
+	// 	{
+	// 		return false;
+	// 	}
+	// }
+
+	return true;
 }
 
 void APlayerCharacter::InitAmmoInventory()
@@ -334,11 +422,15 @@ void APlayerCharacter::OnReloadUIUpdate()
 
 void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	bIsReloading = false;
+	bIsUpperBodyActive = false;
+	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
 	if (CurrentWeapon)
 	{
 		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
+		OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[WeaponAmmoType]);
 	}
 }
 
@@ -439,18 +531,16 @@ void APlayerCharacter::StartShoot(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	//@To-DO : Aiming, Shooting 중 Aim 애니메이션 처리
-	if (CurrentWeapon)
-	{
-		bIsShooting = true;
-		CurrentWeapon->StartShoot();
-	}
+	bIsShooting = true;
 	UpdateIsAiming();
 }
 
 void APlayerCharacter::TriggerShoot(const FInputActionValue& Value)
 {
-	
+	if (CurrentWeapon && CanFire())
+	{
+		CurrentWeapon->StartShoot();
+	}
 }
 
 void APlayerCharacter::StopShoot(const FInputActionValue& Value)
@@ -458,10 +548,6 @@ void APlayerCharacter::StopShoot(const FInputActionValue& Value)
 	if (!Controller) return;
 
 	bIsShooting = false;
-	if (CurrentWeapon)
-	{
-		CurrentWeapon->StopShoot();
-	}
 	UpdateIsAiming();
 }
 
@@ -481,7 +567,7 @@ void APlayerCharacter::StartAim(const FInputActionValue& Value)
 void APlayerCharacter::StopAim(const FInputActionValue& Value)
 {
 	if (!Controller) return;
-
+	
 	bIsManualAiming = false;
 	bUseControllerRotationYaw = false;
 	UpdateIsAiming();
@@ -492,6 +578,9 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 	// 상태가 많아지고 있다. FSM 사용을 고려할 것
 	if (!Controller || !CurrentWeapon || bIsReloading) return;
 	if (CurrentWeapon->IsMagazineFull() || AmmoInventory[CurrentWeapon->GetAmmoType()] <= 0) return;
+
+	bIsReloading = true;
+	bIsUpperBodyActive = true;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();

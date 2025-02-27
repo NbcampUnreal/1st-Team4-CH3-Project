@@ -6,8 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "WeaponBase.generated.h"
 
-UENUM()
-enum class EAmmoType
+UENUM(BlueprintType)
+enum class EAmmoType : uint8
 {
 	Normal,
 	Speed,
@@ -16,7 +16,7 @@ enum class EAmmoType
 };
 ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 
-UCLASS(Abstract)
+UCLASS(Abstract, BlueprintType)
 class THEFOURTHDESCENDANT_API AWeaponBase : public AActor
 {
 	GENERATED_BODY()
@@ -25,7 +25,7 @@ public:
 	// Sets default values for this actor's properties
 	AWeaponBase();
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int, CurrentAmmo, int, TotalAmmo);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int, CurrentAmmo);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnAmmoChanged OnAmmoChanged;
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
@@ -39,6 +39,10 @@ protected:
 	/** 발사 소켓 이름을 반환 */
 	FString GetFireSocketName() const { return FireSocketName; }
 
+	/** 사격 가능 여부 */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Weapon|Fire")
+	bool bCanFire;
+	
 	/** 무기가 사용하는 탄약 타입 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	EAmmoType AmmoType;
@@ -94,11 +98,12 @@ private:
 public:
 	/** 무기가 사용하는 타입을 반환 */
 	EAmmoType GetAmmoType() const { return AmmoType; }
+	/** 현재 탄약 수를 반환 */
+	UFUNCTION(BlueprintPure)
+	int GetCurrentAmmo() const { return CurrentAmmo; }
 	
 	/** 무기를 발사 */
 	void StartShoot();
-	/** 무기 발사 중지 */
-	void StopShoot();
 	/** 탄약 재장전, 총 탄환 수는 호출 후에 갱신된다. */
 	void Reload(int& TotalAmmo);
 	/** 재장전 애니메이션 몽타주 반환 */
@@ -114,6 +119,9 @@ protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */
 	UFUNCTION()
 	void Attack();
+	/** 쿨타임 종료 타이머*/
+	UFUNCTION()
+	void OnCooldownFinished();
 
 	/** 공격 실행, 실질적인 공격을 발생 */
 	virtual void PerformAttack();
