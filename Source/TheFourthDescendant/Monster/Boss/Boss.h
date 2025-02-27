@@ -81,11 +81,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
 	int32 IdleTime;
 	/** 잡몹 패턴 간격 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	int32 SummonPatternInterval;
 	/** 하늘로 미사일 발사하는 패턴 간격 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	int32 FlameExplosionPatternInterval;
+	/** BusterStackTimer를 측정 시작하는 최소 거리 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	float BusterPatternMinDistance;
+	/** 해당 시간만큼 보스 아래에 머물러 있을 경우 Buster 패턴 출력 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	int32 BusterMinTime;
+	/** BusterTimer가 시작된 상태인지 체크 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	bool bIsBusterTimerTriggered;
 
 private:
 	/** Move 상태의 시간을 측정할 타이머 */
@@ -94,12 +103,10 @@ private:
 	FTimerHandle IdleTimer;
 	/** Summon 패턴을 측정할 타이머 */
 	FTimerHandle SummonPatternTimer;
-	/** Summon 패턴 활성화 여부 */
-	FTimerHandle bIsSummonPatternActivate;
 	/** Flame 패턴을 측정할 타이머 */
 	FTimerHandle FlamePatternTimer;
-	/** Flame 패턴 활성화 여부 */
-	FTimerHandle bIsFlamePatternActivate;
+	/** Buster 패턴을 측정할 타이머 */
+	FTimerHandle BusterPatternTimer;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
 
@@ -109,6 +116,18 @@ public:
 	/** 잡몹 소환 로직 함수 */
 	UFUNCTION(BlueprintCallable)
 	void SummonMinions();
+	/** Flame 패턴 시작을 알리는 함수 */
+	void FlamePatternStart();
+	/** Flame 로직 함수 */
+	UFUNCTION(BlueprintCallable)
+	void FlameExplosion();
+	/** Buster 패턴 시작을 알리는 함수 */
+	void BusterPatternStart();
+	/** Buster 로직 함수 */
+	UFUNCTION(BlueprintCallable)
+	void Buster();
+	/** Buster 인식 거리인지 측정 */
+	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
 	void MoveToTarget();
 	/** 좌우 이동 */
