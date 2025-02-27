@@ -14,11 +14,11 @@ ARangeWeapon::ARangeWeapon()
 {
 }
 
-void ARangeWeapon::PerformAttack()
+FShootResult ARangeWeapon::PerformAttack()
 {
 	Super::PerformAttack();
 
-
+	FShootResult ShootResult;
 	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
 	{
 		FVector CameraLocation;
@@ -54,8 +54,11 @@ void ARangeWeapon::PerformAttack()
 				HitActor && HitActor->IsA(AMonster::StaticClass()))
 			{
 				UGameplayStatics::ApplyDamage(HitActor, WeaponAttackPower, PlayerController, this, UDamageType::StaticClass());
+				ShootResult.bShouldHitMarkerOn = true;
 			}
 		}
 		DrawLineTraces(GetWorld(), MuzzleLocation, TargetEnd, { HitResult }, 5.f);
 	}
+
+	return ShootResult;
 }

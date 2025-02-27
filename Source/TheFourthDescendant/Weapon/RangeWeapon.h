@@ -17,5 +17,5 @@ public:
 
 	static const int DefaultRayLength;
 protected:
-	virtual void PerformAttack() override;
+	virtual FShootResult PerformAttack() override;
 };

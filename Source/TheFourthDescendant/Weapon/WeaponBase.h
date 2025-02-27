@@ -16,6 +16,17 @@ enum class EAmmoType : uint8
 };
 ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 
+USTRUCT(BlueprintType)
+struct FShootResult
+{
+	GENERATED_BODY()
+public:
+	FShootResult();
+	/* Hit Marker를 켜는지 여부 */
+	UPROPERTY(BlueprintReadOnly)
+	bool bShouldHitMarkerOn = false;
+};
+
 UCLASS(Abstract, BlueprintType)
 class THEFOURTHDESCENDANT_API AWeaponBase : public AActor
 {
@@ -28,7 +39,7 @@ public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int, CurrentAmmo);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnAmmoChanged OnAmmoChanged;
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootTriggered);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShootTriggered, FShootResult, ShootResult);
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
 
@@ -124,7 +135,7 @@ protected:
 	void OnCooldownFinished();
 
 	/** 공격 실행, 실질적인 공격을 발생 */
-	virtual void PerformAttack();
+	virtual FShootResult PerformAttack();
 
 	/** 반동 수치를 감쇄한다. */
 	void ApplyRecoil(float DeltaTime);
