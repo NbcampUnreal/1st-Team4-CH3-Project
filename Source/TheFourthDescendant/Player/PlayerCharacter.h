@@ -62,6 +62,8 @@ protected:
 	/** UpperBody Slot에서 몽타주 재생 여부 */
 	bool bIsUpperBodyActive;
 
+	/** 캐릭터 이동 입력 여부 */
+	bool bIsMoving;
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
 	/** 왼손 무기 장착 소켓 이름 */
@@ -114,6 +116,11 @@ private:
 public:
 	/** Mapping Context에 따라 입력을 바인딩*/
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	/** 캐릭터의 상태를 업데이트
+	 * Trigger Event를 Tick처럼 사용하고 있었지만 Trigger가 겹칠 경우 제대로 변수가 업데이트되지 않을 수 있다.
+	 * 따라서 Tick으로 분리하도록 한다.
+	 */
+	virtual void Tick(float DeltaSeconds) override;
 
 	/** Amount 만큼 체력을 증가 */
 	UFUNCTION(BlueprintCallable)
@@ -149,8 +156,13 @@ protected:
 	virtual void BeginPlay() override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
-	/** bIsShooting, bIsRightButtonAiming을 이용해서 최종 Aim 여부를 결정 */
+	/** 입력으로부터 IsAiming변수를 갱신, 공격 중이거나 조준 중이면 True가 된다. */
 	void UpdateIsAiming();
+	/** 현재 상태에ㅐ서의 Yaw Control을 업데이트
+	 * 공격, 이동, 조준일 떄는 같이 회전하고 이동하지 않을 경우는 회전하지 않는다.
+	 * IsAiming의 갱신이 필요하다.
+	 */
+	void UpdateYawControl();
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
 	/** 사격 가능 여부를 확인*/
@@ -202,7 +214,7 @@ protected:
 	/** IA_Fire(Completed) 바인딩 함수 */
 	UFUNCTION()
 	void StopShoot(const FInputActionValue& Value);
-	/** IA_Aim(Started, Completed) 바인딩 함수, IsAiming을 토글해서 Aim 애니메이션을 재생한다. */
+	/** IA_Aim(Started) 바인딩 함수, IsAiming을 토글해서 Aim 애니메이션을 재생한다. */
 	UFUNCTION()
 	void StartAim(const FInputActionValue& Value);
 	/** IA_Aim(Completed) 바인딩 함수 */
