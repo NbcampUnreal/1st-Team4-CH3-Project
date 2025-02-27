@@ -22,6 +22,8 @@ ABoss::ABoss()
 	RotationSpeed = 40;
 	MoveTime = 180;
 	IdleTime = 5;
+	BusterPatternMinDistance = 1050;
+	BusterMinTime = 3;
 	Player = nullptr;
 	BossController = nullptr;
 	EnemyController = nullptr;
@@ -224,6 +226,27 @@ void ABoss::FlameExplosion()
 }
 
 
+
+void ABoss::BusterPatternStart()
+{
+	// AI 작동 정지
+	if (BossController == nullptr) return;
+	BossController->StopMovement();
+	
+	// Blackboard 값 초기화
+	Blackboard->SetValueAsBool(FName("IsBuster"), true);
+
+	// Buster Timer 초기화
+	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
+	bIsBusterTimerTriggered = false;
+}
+
+void ABoss::Buster()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Buster Explosion");
+}
+
+
 #pragma endregion
 
 #pragma region Util
@@ -240,6 +263,41 @@ float ABoss::GetDistanceToPlayer()
 	return Dist;
 }
 
+
+
+void ABoss::IsInBusterBound(float& Distance)
+{
+	// 패턴 인식 거리보다 멀다면 return
+	if (Distance > BusterPatternMinDistance)
+	{
+		// 시간 측정 중이었다면 Timer 초기화
+		if (bIsBusterTimerTriggered)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Init");
+			GetWorldTimerManager().ClearTimer(BusterPatternTimer);
+			bIsBusterTimerTriggered = false;
+		}
+		
+	}
+	else
+	{
+		// 패턴 인식 거리인 경우
+		// 시간 측정 중이 아니었다면 Timer 가동
+		if (!bIsBusterTimerTriggered)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Start");
+			GetWorldTimerManager().SetTimer(
+				BusterPatternTimer,
+				this,
+				&ABoss::BusterPatternStart,
+				BusterMinTime,
+				false
+				);
+
+			bIsBusterTimerTriggered = true;
+		}
+	}
+}
 #pragma endregion
 
 #pragma region InitMovementState Functions
@@ -324,6 +382,8 @@ void ABoss::SetMoveState()
 {
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
+	IsInBusterBound(Distance);
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %f"), Distance));
 	
 	switch (MovementState)
 	{
