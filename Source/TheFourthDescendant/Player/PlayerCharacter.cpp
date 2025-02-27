@@ -38,6 +38,9 @@ APlayerCharacter::APlayerCharacter()
 	bIsManualAiming = false;
 	bIsReloading = false;
 	bIsMoving = false;
+	NormalSpringArmLength = 280.0f;
+	AimSpringArmLength = 80.0f;
+	ZoomInterpSpeed = 5.0f;
 	
 	bIsUpperBodyActive = false;
 	bIsOnAttackAnimState = false;
@@ -202,6 +205,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 	UpdateIsAiming();
 	UpdateYawControl();
+	UpdateCameraArmLength(DeltaSeconds);	
 }
 
 void APlayerCharacter::IncreaseHealth(const int Amount)
@@ -331,6 +335,7 @@ void APlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
+	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
 	InitAmmoInventory();
 	if (StartWeaponClass)
@@ -384,6 +389,18 @@ void APlayerCharacter::UpdateYawControl()
 	else
 	{
 		bUseControllerRotationYaw = false;
+	}
+}
+
+void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
+{
+	if (bIsManualAiming && !bIsUpperBodyActive)
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, AimSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
+	}
+	else
+	{
+		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, NormalSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
 	}
 }
 

@@ -49,7 +49,10 @@ protected:
 	/** 캐릭터가 숙이고 있는 중인지 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsCrouching;
-	/** 캐릭터가 조준 중인지 여부, 왼클릭해서 공격 중이거나 오른 클릭해서 조준 중이거나 둘 중 하나이다. */
+	/** 캐릭터가 조준 중인지 여부, 왼클릭해서 공격 중이거나 오른 클릭해서 조준 중이거나 둘 중 하나이다.
+	 * ABP에서 사용되는 변수이다.
+	 * 몽타주가 재생 중일 수 있으므로 실질적으로 조준 중인지를 확인하기 위해서는 bIsOnAttackAnimState를 확인해야 한다.
+	 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsAiming;
 	/** 캐릭터가 공격 버튼을 눌렀을 경우 */
@@ -61,9 +64,19 @@ protected:
 	bool bIsReloading;
 	/** UpperBody Slot에서 몽타주 재생 여부 */
 	bool bIsUpperBodyActive;
-
 	/** 캐릭터 이동 입력 여부 */
 	bool bIsMoving;
+
+	/** 조준을 하지 않았을 때 카메라 암 길이 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
+	float NormalSpringArmLength;
+	/* 조준 했을 때 카메라 암 길이 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
+	float AimSpringArmLength;
+	/* 조준 보간 속도 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
+	float ZoomInterpSpeed;
+	
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
 	/** 왼손 무기 장착 소켓 이름 */
@@ -163,6 +176,8 @@ protected:
 	 * IsAiming의 갱신이 필요하다.
 	 */
 	void UpdateYawControl();
+	/* 현재 상태에 맞춰서 CameraArm 길이를 조절한다. */
+	void UpdateCameraArmLength(float DeltaSeconds);
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
 	/** 사격 가능 여부를 확인*/
