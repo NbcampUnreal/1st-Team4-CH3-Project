@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Monster/Monster.h"
 
+const int ARangeWeapon::DefaultRayLength = 5000;
 
 // Sets default values
 ARangeWeapon::ARangeWeapon()
@@ -24,12 +25,14 @@ void ARangeWeapon::PerformAttack()
 		FRotator CameraRotation;
 	    PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
+		// 1차 라인 트레이스, 카메라 위치에서 화면 중앙 방향으로 레이 캐스트
 		const FVector CameraTraceStart = CameraLocation;
-		const FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * 2000.f;
+		const FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * DefaultRayLength;
 		FHitResult CameraHitResult;
 		FCollisionQueryParams CollisionQueryParams;
 		CollisionQueryParams.AddIgnoredActor(this);
 		CollisionQueryParams.AddIgnoredActor(GetOwner());
+		
 		FVector TargetEnd = CameraTraceEnd;
 		if (GetWorld()->LineTraceSingleByChannel(CameraHitResult, CameraTraceStart, CameraTraceEnd, ECollisionChannel::ECC_Visibility, CollisionQueryParams))
 		{
@@ -38,11 +41,12 @@ void ARangeWeapon::PerformAttack()
 			TargetEnd = CameraHitResult.ImpactPoint + CameraRotation.Vector() * 10.f;
 		}
 
+		// 2차 라인 트레이스, 무기의 총구 위치에서 타겟 위치로 레이 캐스트
+		// 카메라 위치부터 타겟 위치까지 물체가 존재하지 않아도 총구 앞에 다른 물체가 있을 수 있다.
 		FCollisionQueryParams EnemyQueryParams;
 		EnemyQueryParams.AddIgnoredActor(this);
 		EnemyQueryParams.AddIgnoredActor(GetOwner());
 		FHitResult HitResult;
-		// @TO-Do : SocketName이 잘못되었을 경우 처리
 		const FVector MuzzleLocation = GetWeaponMesh()->GetSocketLocation(FName(GetFireSocketName()));
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, TargetEnd, ECollisionChannel::ECC_Pawn, EnemyQueryParams))
 		{
