@@ -21,5 +21,5 @@ private:
 protected:
 	/** Task가 실행되기 시작할 때 호출되는 함수 */
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-	
+	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 };

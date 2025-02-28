@@ -165,13 +165,21 @@ void ABoss::OnDeath()
 void ABoss::MoveToTarget()
 {
 	if (Player == nullptr) return;
+	
+	FVector BossLocation = GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
 
-	// 플레이어 방향으로 전방이동
-	BossController->MoveToTargetActor(Player);
+	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
+
+	AddMovementInput(Direction, 1.0f);
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Target Movement Input");
+	
 }
 
 void ABoss::MoveHorizontal(int32& Direction)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Horizontal");
+
 	// 움직일 방향벡터 선언
 	FVector DirectionVector = FVector::ZeroVector;
 	
@@ -186,17 +194,20 @@ void ABoss::MoveHorizontal(int32& Direction)
 		DirectionVector = GetActorRightVector();
 	}
 
-	AddMovementInput(DirectionVector);
+	AddMovementInput(DirectionVector, 1.0f);
 }
 
 
 void ABoss::MoveBack()
 {
+
 	// 보스의 후방 벡터 반환
 	FVector BackDirection = -GetActorForwardVector();
 	
 	// 뒤로 이동
 	AddMovementInput(BackDirection, 1.0f);
+
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Move Back");
 }
 
 
@@ -235,11 +246,10 @@ void ABoss::SummonPatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 	
 	// Blackboard 값 초기화
 	bIsSummon = true;
-	Blackboard->SetValueAsBool(FName("IsSummon"), bIsSummon);
 }
 
 void ABoss::SummonMinions()
@@ -258,7 +268,7 @@ void ABoss::FlamePatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 
 	// 소켓 배열 초기화
 	RocketSocketTransforms.Empty();
@@ -276,7 +286,6 @@ void ABoss::FlamePatternStart()
 	
 	// Blackboard 값 초기화
 	bIsFlame = true;
-	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
 void ABoss::SetFlameExplosionTimer()
@@ -343,11 +352,10 @@ void ABoss::BusterPatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 	
 	// Blackboard 값 초기화
 	bIsBuster = true;
-	Blackboard->SetValueAsBool(FName("IsBuster"), bIsBuster);
 
 	// Buster Timer 초기화
 	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
@@ -585,7 +593,7 @@ void ABoss::InitMovementStateToIdle()
 
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 
 	// Idle Timer 초기화
 	GetWorldTimerManager().SetTimer(
@@ -660,18 +668,14 @@ void ABoss::SetMoveState()
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
 	IsInBusterBound(Distance);
-	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %f"), Distance));
-	
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %s"), *UEnum::GetValueAsString(MovementState)));
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Velocity %f"), GetCharacterMovement()->Velocity.Length()));
 	switch (MovementState)
 	{
 		// (1) 플레이어에게 전진하는 상태
 	case EBossMovementState::Approaching:
 		if (Distance < ApproachAcceptance)
 		{
-			// AI 작동 정지
-			if (BossController == nullptr) return;
-			BossController->StopMovement();
-			
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
 			MovementState = EBossMovementState::Surrounding;
 		}
