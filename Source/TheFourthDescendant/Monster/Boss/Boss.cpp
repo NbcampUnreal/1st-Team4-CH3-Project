@@ -12,6 +12,10 @@ ABoss::ABoss()
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
+	bIsSummon = false;
+	bIsFlame = false;
+	bIsBuster = false;
+	bIsBusterTimerTriggered = false;
 	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
@@ -28,6 +32,7 @@ ABoss::ABoss()
 	BossController = nullptr;
 	EnemyController = nullptr;
 	Blackboard = nullptr;
+	Mesh = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
 }
@@ -59,6 +64,9 @@ void ABoss::BeginPlay()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss BeginPlay : BlackBoard Casting Failed !");
 	}
 	Blackboard->SetValueAsObject(FName("TargetActor"), Player);
+
+	// 스켈레탈 메시 할당
+	Mesh = GetMesh();
 
 	// 캐릭터 이동속도 초기화
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
@@ -191,7 +199,7 @@ void ABoss::RotationToTarget(float DeltaSeconds)
 }
 #pragma endregion
 
-#pragma region Attack Pattern
+#pragma region Special Attack Pattern
 
 void ABoss::SummonPatternStart()
 {
@@ -200,7 +208,8 @@ void ABoss::SummonPatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsSummon"), true);
+	bIsSummon = true;
+	Blackboard->SetValueAsBool(FName("IsSummon"), bIsSummon);
 }
 
 void ABoss::SummonMinions()
@@ -217,7 +226,8 @@ void ABoss::FlamePatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsFlame"), true);
+	bIsFlame = true;
+	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
 void ABoss::FlameExplosion()
@@ -234,7 +244,8 @@ void ABoss::BusterPatternStart()
 	BossController->StopMovement();
 	
 	// Blackboard 값 초기화
-	Blackboard->SetValueAsBool(FName("IsBuster"), true);
+	bIsBuster = true;
+	Blackboard->SetValueAsBool(FName("IsBuster"), bIsBuster);
 
 	// Buster Timer 초기화
 	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
@@ -246,6 +257,14 @@ void ABoss::Buster()
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Buster Explosion");
 }
 
+#pragma endregion
+
+#pragma region Normal Attack Pattern
+
+void ABoss::SlugShot()
+{
+	// 대포 발사하는 로직
+}
 
 #pragma endregion
 
@@ -263,6 +282,21 @@ float ABoss::GetDistanceToPlayer()
 	return Dist;
 }
 
+FRotator ABoss::GetBoneRotation(FName BoneName)
+{
+	if (Mesh == nullptr || Player == nullptr) return FRotator();
+
+	// 뼈의 위치 반환
+	FVector BoneLocation = Mesh->GetBoneLocation(BoneName);
+
+	// 플레이어 위치 반환
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 회전 목표 방향벡터 반환
+	FRotator BoneTargetRotation = (PlayerLocation - BoneLocation).GetSafeNormal().Rotation();
+	
+	return BoneTargetRotation;
+}
 
 
 void ABoss::IsInBusterBound(float& Distance)
@@ -297,6 +331,31 @@ void ABoss::IsInBusterBound(float& Distance)
 			bIsBusterTimerTriggered = true;
 		}
 	}
+}
+
+void ABoss::SetNormalAttackTimer()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Normal Start");
+
+	// 중복 활성화 방지
+	GetWorldTimerManager().ClearTimer(NormalPatternTimer);
+	
+	// 일반 공격 패턴 간격에 NormalAttackDeviation 만큼 편차를 둔 난수 생성
+	int PatternInterval = FMath::RandRange(
+		NormalAttackPatternInterval - NormalAttackDeviation,
+		NormalAttackPatternInterval + NormalAttackDeviation
+		);
+	
+	// 공격 상태 해제
+	GetWorldTimerManager().SetTimer(
+		NormalPatternTimer,
+		[this]()
+		{
+			Blackboard->SetValueAsBool(FName("IsAttacking"), false);
+		},
+		PatternInterval,
+		false
+		);
 }
 #pragma endregion
 

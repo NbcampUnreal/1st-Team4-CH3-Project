@@ -33,7 +33,22 @@ public:
 	/** 현재 적의 이동 상태 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	EBossMovementState MovementState;
-
+	/** 잡몹 소환 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsSummon;
+	/** FlameExplosion 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsFlame;
+	/** Buster 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsBuster;
+	/** 왼쪽 SlugShot 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsLSlugShot;
+	/** 오른쪽 SlugShot 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsRSlugShot;
+	
 protected:
 	/** 몬스터의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
@@ -93,8 +108,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	int32 BusterMinTime;
 	/** BusterTimer가 시작된 상태인지 체크 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	bool bIsBusterTimerTriggered;
+	/** 일반 공격 패턴 간격 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	int32 NormalAttackPatternInterval;
+	/** 일반 공격 패턴 간격 편차 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	int32 NormalAttackDeviation;
 
 private:
 	/** Move 상태의 시간을 측정할 타이머 */
@@ -107,8 +128,12 @@ private:
 	FTimerHandle FlamePatternTimer;
 	/** Buster 패턴을 측정할 타이머 */
 	FTimerHandle BusterPatternTimer;
+	/** 일반 공격 패턴을 측정할 타이머 */
+	FTimerHandle NormalPatternTimer;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
+	/** Bone 회전을 위한 SkeletalMesh 선언 */
+	USkeletalMeshComponent* Mesh;
 
 public:
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
@@ -126,6 +151,12 @@ public:
 	/** Buster 로직 함수 */
 	UFUNCTION(BlueprintCallable)
 	void Buster();
+	/** 일반 공격 패턴 타이머 활성화 함수 */
+	UFUNCTION(BlueprintCallable)
+	void SetNormalAttackTimer();
+	/** SlugShot 로직 구현 */
+	UFUNCTION(BlueprintCallable)
+	void SlugShot();
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
@@ -140,9 +171,13 @@ public:
 	void OnDeath();
 	/** 플레이어와 거리를 측정하는 함수 */
 	float GetDistanceToPlayer();
+	/** Bone의 회전 보간 값을 반환하는 함수 */
+	UFUNCTION(BlueprintCallable)
+	FRotator GetBoneRotation(FName BoneName);
 	/** 거리에 따라 Move 상태 전이 */
 	void SetMoveState();
 	/** 이동 상태로 전이 */
+	UFUNCTION(BlueprintCallable)
 	void InitMovementStateToMove();
 	/** 상태 초기화 함수.
 	* 스폰 이후 블루프린트에서 호출 */
