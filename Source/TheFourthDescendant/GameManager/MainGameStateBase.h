@@ -44,6 +44,8 @@ public:
 private:
 	/** 스포너에 사용할 타이머 핸들러 */
 	FTimerHandle SpawnerTimer;
+	/** 보스 레벨 여부 */
+	bool bIsBossLevel;
 
 
 public:
@@ -63,5 +65,10 @@ public:
 	/** 몬스터 스폰 시 호출하는 함수 */
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void OnEnemySpawned();
-	
+	/** 현재 레벨이 끝나는 조건을 만족했을 때 호출 */
+	void EndLevel();
+
+private:
+	/** 일반 몬스터 필드의 스포너를 가져오는 함수 */
+	void GetMonsterSpawner();
 };

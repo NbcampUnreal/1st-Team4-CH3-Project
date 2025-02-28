@@ -9,22 +9,26 @@ AMainGameStateBase::AMainGameStateBase()
 	CurrentLevelIndex = 0;
 	TotalWaveCount = 0;
 	TempWaveIndex = 0;
+	bIsBossLevel = false;
 }
 
 void AMainGameStateBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 월드에서 AMonsterSpawner 클래스를 가진 액터를 찾아서 Spawner에 저장
-	AActor* FoundSpawner = UGameplayStatics::GetActorOfClass(GetWorld(), AMonsterSpawner::StaticClass());
-	if (FoundSpawner)
+	FString LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Current Level : %s"), *LevelName));
+
+	if (LevelName.Equals("Boss"))
 	{
-		Spawner = Cast<AMonsterSpawner>(FoundSpawner);
-		StartLevel();
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Boss Level !");
+		bIsBossLevel = true;
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("MonsterSpawner not found!"));
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Normal Level !");
+		bIsBossLevel = false;
+		GetMonsterSpawner();
 	}
 }
 
@@ -56,6 +60,9 @@ void AMainGameStateBase::StartLevel()
 	}
 }
 
+
+
+
 void AMainGameStateBase::EnemySpawn()
 {
 	// @To-do Wave에 맞는 몬스터 스폰 로직
@@ -66,6 +73,9 @@ void AMainGameStateBase::EnemySpawn()
 
 void AMainGameStateBase::OnEnemyKilled()
 {
+	// 보스 맵이면 return
+	if (bIsBossLevel) return;
+	
 	// 스폰된 몬스터 수 감소
 	--SpawnedEnemyCount;
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("EnemyKilled ! Current : %d num!"), SpawnedEnemyCount));
@@ -108,8 +118,31 @@ void AMainGameStateBase::SetNextLevelWaveIndex()
 
 
 
+void AMainGameStateBase::EndLevel()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Black, "Level end !");
+}
+
+
+
 void AMainGameStateBase::OnEnemySpawned()
 {
 	++SpawnedEnemyCount;
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("EnemySpawned %d num!"), SpawnedEnemyCount));
+}
+
+
+void AMainGameStateBase::GetMonsterSpawner()
+{
+	// 월드에서 AMonsterSpawner 클래스를 가진 액터를 찾아서 Spawner에 저장
+	AActor* FoundSpawner = UGameplayStatics::GetActorOfClass(GetWorld(), AMonsterSpawner::StaticClass());
+	if (FoundSpawner)
+	{
+		Spawner = Cast<AMonsterSpawner>(FoundSpawner);
+		StartLevel();
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("MonsterSpawner not found!"));
+	}
 }

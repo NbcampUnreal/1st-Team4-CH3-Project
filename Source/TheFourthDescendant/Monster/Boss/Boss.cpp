@@ -4,6 +4,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
+#include "TheFourthDescendant/Gimmic/SpawnVolume.h"
+#include "TheFourthDescendant/Item/MineItem/MineItem.h"
+#include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
 #pragma region InitComponent
@@ -15,7 +19,11 @@ ABoss::ABoss()
 	bIsSummon = false;
 	bIsFlame = false;
 	bIsBuster = false;
+	bIsLSlugShot = false;
+	bIsRSlugShot = false;
 	bIsBusterTimerTriggered = false;
+	MineLocationIndex = 0;
+	FlameRepeatCount = 0;
 	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
@@ -23,6 +31,8 @@ ABoss::ABoss()
 	MaxRadius = 800;
 	SummonPatternInterval = 70;
 	FlameExplosionPatternInterval = 90;
+	NormalAttackPatternInterval = 6;
+	NormalAttackDeviation = 2;
 	RotationSpeed = 40;
 	MoveTime = 180;
 	IdleTime = 5;
@@ -33,10 +43,12 @@ ABoss::ABoss()
 	EnemyController = nullptr;
 	Blackboard = nullptr;
 	Mesh = nullptr;
+	EnemySpawner = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
+	RocketSocketTransforms.Empty();
+	ExplosionLocations.Empty();
 }
-
 
 
 void ABoss::BeginPlay()
@@ -101,10 +113,16 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
+	
 	// @To-do 쉴드 50%, 0%, 체력 75% 때 그로기 패턴 추가
 	if (Status.Health <= 0)
 	{
 		OnDeath();
+
+		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
+		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
+		MainGameState->EndLevel();
 	}
 
 	return ActualDamage;
@@ -215,6 +233,11 @@ void ABoss::SummonPatternStart()
 void ABoss::SummonMinions()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
+
+	for (int i=0; i<SpawnEnemyCounter; ++i)
+	{
+		EnemySpawner->SpawnEnemy();	
+	}
 }
 
 
@@ -224,15 +247,79 @@ void ABoss::FlamePatternStart()
 	// AI 작동 정지
 	if (BossController == nullptr) return;
 	BossController->StopMovement();
+
+	// 소켓 배열 초기화
+	RocketSocketTransforms.Empty();
+	
+	// 소켓 이름 리스트 생성
+	for (int i = 1; i <= 6; i++)
+	{
+		FString SocketName = FString::Printf(TEXT("RocketSocket%d"), i);
+		FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Socket Init : !");
+
+		// 배열에 추가
+		RocketSocketTransforms.Add(SocketTransform);
+	}
 	
 	// Blackboard 값 초기화
 	bIsFlame = true;
 	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
+void ABoss::SetFlameExplosionTimer()
+{
+	GetWorldTimerManager().SetTimer(
+		FlameRepeatTimer,
+		this,
+		&ABoss::FlameExplosion,
+		0.075f,
+		true);
+}
+
 void ABoss::FlameExplosion()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Flame Explosion");
+	if (MissileClass == nullptr) return;
+
+	// 미사일을 발사할 소켓의 위치를 랜덤으로 할당
+	int32 RandSocketIndex = FMath::RandRange(0,5);
+	FVector SpawnLocation = RocketSocketTransforms[RandSocketIndex].GetLocation();
+	FRotator SpawnRotation = RocketSocketTransforms[RandSocketIndex].Rotator();
+
+	// 발사할 미사일 캐스팅
+	AMissileProjectile* SpawnedRocket = GetWorld()->SpawnActor<AMissileProjectile>(MissileClass, SpawnLocation, SpawnRotation);
+
+	// 랜덤 각도 할당
+	float RandSocketRoll = FMath::RandRange(-0.2f, 0.2f);
+	float RandSocketPitch = FMath::RandRange(-0.2f, 0.2f);
+
+	// 미사일 발사
+	if (SpawnedRocket)
+	{
+		FVector LaunchDirection = FVector(RandSocketRoll, RandSocketPitch, 1); 
+		SpawnedRocket->FireMissileIntoTheSky(LaunchDirection);
+	}
+
+	// 스폰할 지뢰 좌표 할당
+	FVector MineSpawnLocation = ExplosionLocations[MineLocationIndex]->GetActorLocation();
+
+	// 스폰할 Mine 캐스팅
+	AMineItem* Mine = GetWorld()->SpawnActor<AMineItem>(MineClass, MineSpawnLocation, FRotator::ZeroRotator);
+	
+
+	++FlameRepeatCount;
+	++MineLocationIndex;
+
+	if (FlameRepeatCount >= 16)
+	{
+		GetWorldTimerManager().ClearTimer(FlameRepeatTimer);
+		FlameRepeatCount = 0;
+	}
+
+	if (MineLocationIndex >= ExplosionLocations.Num())
+	{
+		MineLocationIndex = 0;
+	}
 }
 
 
@@ -271,6 +358,8 @@ void ABoss::SlugShot()
 #pragma region Util
 float ABoss::GetDistanceToPlayer()
 {
+	if (Player == nullptr) return 0;
+	
 	// 보스, 플레이어의 거리를 반환
 	FVector BossLocation = GetActorLocation();
 	FVector PlayerLocation = Player->GetActorLocation();
