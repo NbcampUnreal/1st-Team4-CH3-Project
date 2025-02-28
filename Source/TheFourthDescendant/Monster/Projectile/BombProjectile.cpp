@@ -17,24 +17,33 @@ void ABombProjectile::OnOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 	
 	if (OtherActor && OtherActor != this)
 	{
-		if (OtherActor->ActorHasTag("Player"))
+		if (OtherActor->ActorHasTag("Ground"))
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Damaged");
-
-			// 플레이어에게 데미지 적용
-			UGameplayStatics::ApplyDamage(OtherActor, ProjectileDamage, GetInstigatorController(), this, UDamageType::StaticClass());
-
-			// 게임 인스턴스 캐스팅
-			UGameInstance* GameInstance = GetWorld()->GetGameInstance();
-			UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+			// 폭발 파티클 스폰
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				ExplosionParticle,
+				GetActorLocation());
 			
-			// 게임 인스턴스에 플레이어에게 가한 데미지 최신화
-			MainGameInstance->AddReceivedDamageByEnemy(ProjectileDamage);
+			// 플레이어가 폭발 범위 내에 있는 지 확인
+			TArray<AActor*> OverlappingActors;
+			AttackRangeCollisionComp->GetOverlappingActors(OverlappingActors);
 
-			// 회피한 횟수 1 감소
-			MainGameInstance->SubtractEvasionAttackCount(1);
+			for (AActor* Actor : OverlappingActors)
+			{
+				if (Actor && Actor->ActorHasTag("Player"))
+				{
+					UGameplayStatics::ApplyDamage(
+						Actor,
+						ProjectileDamage,
+						nullptr,
+						this,
+						UDamageType::StaticClass()
+						);
+				}
+			}
 
-			bIsDamaged = true;
+			Destroy();
 		}
 	}
 	
