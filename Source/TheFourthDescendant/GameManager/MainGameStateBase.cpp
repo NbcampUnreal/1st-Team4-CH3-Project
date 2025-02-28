@@ -16,14 +16,17 @@ void AMainGameStateBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FString LevelName = GetWorld()->GetMapName();
+	FString LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Current Level : %s"), *LevelName));
 
-	if (LevelName == "UtopianCityDemoMap")
+	if (LevelName.Equals("Boss"))
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Boss Level !");
 		bIsBossLevel = true;
 	}
 	else
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Normal Level !");
 		bIsBossLevel = false;
 		GetMonsterSpawner();
 	}
