@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class ASpawnVolume;
 class AMineItem;
 class AMissileProjectile;
 class ABossController;
@@ -109,6 +110,12 @@ protected:
 	/** 잡몹 패턴 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	int32 SummonPatternInterval;
+	/** 잡몹 스포너 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	ASpawnVolume* EnemySpawner;
+	/** 소환할 잡몹 수 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
+	int32 SpawnEnemyCounter;
 	/** 하늘로 미사일 발사하는 패턴 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Stat|Pattern")
 	int32 FlameExplosionPatternInterval;

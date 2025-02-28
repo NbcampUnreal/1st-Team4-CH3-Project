@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/Gimmic/SpawnVolume.h"
 #include "TheFourthDescendant/Item/MineItem/MineItem.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
@@ -17,6 +18,8 @@ ABoss::ABoss()
 	bIsSummon = false;
 	bIsFlame = false;
 	bIsBuster = false;
+	bIsLSlugShot = false;
+	bIsRSlugShot = false;
 	bIsBusterTimerTriggered = false;
 	MineLocationIndex = 0;
 	FlameRepeatCount = 0;
@@ -27,6 +30,8 @@ ABoss::ABoss()
 	MaxRadius = 800;
 	SummonPatternInterval = 70;
 	FlameExplosionPatternInterval = 90;
+	NormalAttackPatternInterval = 6;
+	NormalAttackDeviation = 2;
 	RotationSpeed = 40;
 	MoveTime = 180;
 	IdleTime = 5;
@@ -37,12 +42,12 @@ ABoss::ABoss()
 	EnemyController = nullptr;
 	Blackboard = nullptr;
 	Mesh = nullptr;
+	EnemySpawner = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
 	RocketSocketTransforms.Empty();
 	ExplosionLocations.Empty();
 }
-
 
 
 void ABoss::BeginPlay()
@@ -221,6 +226,11 @@ void ABoss::SummonPatternStart()
 void ABoss::SummonMinions()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
+
+	for (int i=0; i<SpawnEnemyCounter; ++i)
+	{
+		EnemySpawner->SpawnEnemy();	
+	}
 }
 
 
