@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class AMissileProjectile;
 class ABossController;
 class APlayerCharacter;
 class AEnemyController;
@@ -50,6 +51,8 @@ public:
 	bool bIsRSlugShot;
 	
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TSubclassOf<AMissileProjectile> MissileClass;
 	/** 몬스터의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	float AttackPower;
@@ -126,6 +129,8 @@ private:
 	FTimerHandle SummonPatternTimer;
 	/** Flame 패턴을 측정할 타이머 */
 	FTimerHandle FlamePatternTimer;
+	/** Flame 패턴을 반복할 타이머 */
+	FTimerHandle FlameRepeatTimer;
 	/** Buster 패턴을 측정할 타이머 */
 	FTimerHandle BusterPatternTimer;
 	/** 일반 공격 패턴을 측정할 타이머 */
@@ -134,6 +139,10 @@ private:
 	ABossController* BossController;
 	/** Bone 회전을 위한 SkeletalMesh 선언 */
 	USkeletalMeshComponent* Mesh;
+	/** 로켓을 발사할 소켓의 위치 정보 */
+	TArray<FTransform> RocketSocketTransforms;
+	/** Flame 반복 횟수 측정 */
+	int32 FlameRepeatCount;
 
 public:
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
@@ -145,6 +154,8 @@ public:
 	void FlamePatternStart();
 	/** Flame 로직 함수 */
 	UFUNCTION(BlueprintCallable)
+	void SetFlameExplosionTimer();
+	/** Flame 로직 함수 */
 	void FlameExplosion();
 	/** Buster 패턴 시작을 알리는 함수 */
 	void BusterPatternStart();

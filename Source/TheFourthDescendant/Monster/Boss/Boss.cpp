@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
 #pragma region InitComponent
@@ -16,6 +17,7 @@ ABoss::ABoss()
 	bIsFlame = false;
 	bIsBuster = false;
 	bIsBusterTimerTriggered = false;
+	FlameRepeatCount =0;
 	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
@@ -35,6 +37,7 @@ ABoss::ABoss()
 	Mesh = nullptr;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
+	RocketSocketTransforms.Empty();
 }
 
 
@@ -224,15 +227,64 @@ void ABoss::FlamePatternStart()
 	// AI 작동 정지
 	if (BossController == nullptr) return;
 	BossController->StopMovement();
+
+	// 소켓 배열 초기화
+	RocketSocketTransforms.Empty();
+	
+	// 소켓 이름 리스트 생성
+	for (int i = 1; i <= 6; i++)
+	{
+		FString SocketName = FString::Printf(TEXT("RocketSocket%d"), i);
+		FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Socket Init : !");
+
+		// 배열에 추가
+		RocketSocketTransforms.Add(SocketTransform);
+	}
 	
 	// Blackboard 값 초기화
 	bIsFlame = true;
 	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
+void ABoss::SetFlameExplosionTimer()
+{
+	GetWorldTimerManager().SetTimer(
+		FlameRepeatTimer,
+		this,
+		&ABoss::FlameExplosion,
+		0.075f,
+		true);
+}
+
 void ABoss::FlameExplosion()
 {
+	if (MissileClass == nullptr) return;
+	
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Flame Explosion");
+	
+	int32 RandSocketIndex = FMath::RandRange(0,5);
+	FVector SpawnLocation = RocketSocketTransforms[RandSocketIndex].GetLocation();
+	FRotator SpawnRotation = RocketSocketTransforms[RandSocketIndex].Rotator();
+	
+	AMissileProjectile* SpawnedRocket = GetWorld()->SpawnActor<AMissileProjectile>(MissileClass, SpawnLocation, SpawnRotation);
+
+	float RandSocketRoll = FMath::RandRange(-0.2f, 0.2f);
+	float RandSocketPitch = FMath::RandRange(-0.2f, 0.2f);
+
+	if (SpawnedRocket)
+	{
+		FVector LaunchDirection = FVector(RandSocketRoll, RandSocketPitch, 1); 
+		SpawnedRocket->FireMissileIntoTheSky(LaunchDirection);
+	}
+
+	++FlameRepeatCount;
+
+	if (FlameRepeatCount >= 16)
+	{
+		GetWorldTimerManager().ClearTimer(FlameRepeatTimer);
+		FlameRepeatCount = 0;
+	}
 }
 
 
@@ -271,6 +323,8 @@ void ABoss::SlugShot()
 #pragma region Util
 float ABoss::GetDistanceToPlayer()
 {
+	if (Player == nullptr) return 0;
+	
 	// 보스, 플레이어의 거리를 반환
 	FVector BossLocation = GetActorLocation();
 	FVector PlayerLocation = Player->GetActorLocation();
