@@ -30,9 +30,7 @@ void UMoveBack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, f
 	// 보스가 BackMoving 상태가 끝났다면 성공 반환
 	if (Boss->MovementState != EBossMovementState::BackMoving)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "MoveBack Finished !");
 		OwnerComp.GetBlackboardComponent()->SetValueAsBool(FName("IsMoving"), false);
-
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		return;
 	}
