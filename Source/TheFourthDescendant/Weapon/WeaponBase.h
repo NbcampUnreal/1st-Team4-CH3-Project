@@ -68,6 +68,8 @@ protected:
 	/** 무기의 발사 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
 	float FireInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
+	float RattleInterval;
 	/** 무기의 발사 타이머 핸들 */
 	FTimerHandle FireTimerHandle;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Fire")
@@ -115,9 +117,11 @@ public:
 	/** 현재 탄약 수를 반환 */
 	UFUNCTION(BlueprintPure)
 	int GetCurrentAmmo() const { return CurrentAmmo; }
-	
+
 	/** 무기를 발사 */
 	void StartShoot();
+	/** 총알이 없을 경우 사운드를 재생 */
+	void PlayRattleSound();
 	/** 탄약 재장전, 총 탄환 수는 호출 후에 갱신된다. */
 	void Reload(int& TotalAmmo);
 	/** 재장전 애니메이션 몽타주 반환 */

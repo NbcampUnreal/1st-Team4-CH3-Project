@@ -26,6 +26,7 @@ AWeaponBase::AWeaponBase()
 	
 	WeaponAttackPower = 10;
 	FireInterval = 0.2f;
+	RattleInterval = 1.0f;
 	RecoilAmount = 2.0f;
 	RecoilRecoverySpeed = 5.0f;
 	MaxRecoilAmount = 15.0f;
@@ -47,6 +48,20 @@ void AWeaponBase::StartShoot()
 	if (bCanFire && CurrentAmmo > 0)
 	{
 		Attack();
+	}
+	else if (bCanFire && CurrentAmmo <= 0)
+	{
+		PlayRattleSound();
+	}
+}
+
+void AWeaponBase::PlayRattleSound()
+{
+	if (RattleSfx)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, RattleSfx, GetActorLocation());
+		bCanFire = false;
+		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::OnCooldownFinished, RattleInterval, false);
 	}
 }
 
