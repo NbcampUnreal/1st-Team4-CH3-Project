@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "CharacterBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTakeDamageDispatcher, float, HPPercent, float, SPPercent);
+
 USTRUCT(BlueprintType)
 struct FStatus
 {
@@ -40,6 +42,10 @@ class THEFOURTHDESCENDANT_API ACharacterBase : public ACharacter
 public:
 	ACharacterBase();
 
+public:
+	UPROPERTY(BlueprintAssignable, Category = "Character|Event")
+	FTakeDamageDispatcher DamageDispatcher;
+	
 	/** 캐릭터의 현재 체력을 반환*/
 	UFUNCTION(BlueprintPure, Category = "Character|Status")
 	int32 GetHealth() const;
