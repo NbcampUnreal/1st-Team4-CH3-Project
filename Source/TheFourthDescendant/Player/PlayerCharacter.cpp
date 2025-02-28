@@ -408,7 +408,7 @@ void APlayerCharacter::UpdateYawControl()
 
 void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
 {
-	if (bIsManualAiming && !bIsUpperBodyActive)
+	if (bIsManualAiming && !bIsUpperBodyActive && !bIsFullBodyActive)
 	{
 		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, AimSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
 	}
