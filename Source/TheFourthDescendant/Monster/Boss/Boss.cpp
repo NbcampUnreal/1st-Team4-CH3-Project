@@ -306,6 +306,9 @@ void ABoss::FlameExplosion()
 		SpawnedRocket->FireMissileIntoTheSky(LaunchDirection);
 	}
 
+	// 미사일 발사 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, FlameSound, SpawnLocation, SpawnRotation);
+
 	// 스폰할 지뢰 좌표 할당
 	FVector MineSpawnLocation = ExplosionLocations[MineLocationIndex]->GetActorLocation();
 
