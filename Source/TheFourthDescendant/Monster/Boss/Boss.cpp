@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/Item/MineItem/MineItem.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
@@ -17,7 +18,8 @@ ABoss::ABoss()
 	bIsFlame = false;
 	bIsBuster = false;
 	bIsBusterTimerTriggered = false;
-	FlameRepeatCount =0;
+	MineLocationIndex = 0;
+	FlameRepeatCount = 0;
 	AttackPower = 0;
 	MinRadius = 200;
 	BackMovingAcceptance = 400;
@@ -38,6 +40,7 @@ ABoss::ABoss()
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	MovementState = EBossMovementState::Idle;
 	RocketSocketTransforms.Empty();
+	ExplosionLocations.Empty();
 }
 
 
@@ -260,30 +263,45 @@ void ABoss::SetFlameExplosionTimer()
 void ABoss::FlameExplosion()
 {
 	if (MissileClass == nullptr) return;
-	
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Flame Explosion");
-	
+
+	// 미사일을 발사할 소켓의 위치를 랜덤으로 할당
 	int32 RandSocketIndex = FMath::RandRange(0,5);
 	FVector SpawnLocation = RocketSocketTransforms[RandSocketIndex].GetLocation();
 	FRotator SpawnRotation = RocketSocketTransforms[RandSocketIndex].Rotator();
-	
+
+	// 발사할 미사일 캐스팅
 	AMissileProjectile* SpawnedRocket = GetWorld()->SpawnActor<AMissileProjectile>(MissileClass, SpawnLocation, SpawnRotation);
 
+	// 랜덤 각도 할당
 	float RandSocketRoll = FMath::RandRange(-0.2f, 0.2f);
 	float RandSocketPitch = FMath::RandRange(-0.2f, 0.2f);
 
+	// 미사일 발사
 	if (SpawnedRocket)
 	{
 		FVector LaunchDirection = FVector(RandSocketRoll, RandSocketPitch, 1); 
 		SpawnedRocket->FireMissileIntoTheSky(LaunchDirection);
 	}
 
+	// 스폰할 지뢰 좌표 할당
+	FVector MineSpawnLocation = ExplosionLocations[MineLocationIndex]->GetActorLocation();
+
+	// 스폰할 Mine 캐스팅
+	AMineItem* Mine = GetWorld()->SpawnActor<AMineItem>(MineClass, MineSpawnLocation, FRotator::ZeroRotator);
+	
+
 	++FlameRepeatCount;
+	++MineLocationIndex;
 
 	if (FlameRepeatCount >= 16)
 	{
 		GetWorldTimerManager().ClearTimer(FlameRepeatTimer);
 		FlameRepeatCount = 0;
+	}
+
+	if (MineLocationIndex >= ExplosionLocations.Num())
+	{
+		MineLocationIndex = 0;
 	}
 }
 

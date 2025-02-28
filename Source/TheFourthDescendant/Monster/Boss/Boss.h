@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class AMineItem;
 class AMissileProjectile;
 class ABossController;
 class APlayerCharacter;
@@ -51,8 +52,15 @@ public:
 	bool bIsRSlugShot;
 	
 protected:
+	/** 발사할 미사일 클래스 정보 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
 	TSubclassOf<AMissileProjectile> MissileClass;
+	/** 미사일 발사 후 설치할 Mine 정보 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TSubclassOf<AMineItem> MineClass;
+	/** 미사일 발사 후 폭파할 위치 정보 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TArray<AActor*> ExplosionLocations;
 	/** 몬스터의 공격력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Status")
 	float AttackPower;
@@ -143,6 +151,8 @@ private:
 	TArray<FTransform> RocketSocketTransforms;
 	/** Flame 반복 횟수 측정 */
 	int32 FlameRepeatCount;
+	/** Spawn 시킬 Mine의 위치 Index */
+	int32 MineLocationIndex;
 
 public:
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
