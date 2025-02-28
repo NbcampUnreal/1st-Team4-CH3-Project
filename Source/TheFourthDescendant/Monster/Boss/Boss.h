@@ -6,6 +6,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class AHomingProjectile;
 class ABombProjectile;
 class AProjectileBase;
 class ASpawnVolume;
@@ -55,6 +56,12 @@ public:
 	/** 오른쪽 SlugShot 패턴 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	bool bIsRSlugShot;
+	/** 왼쪽 JavelinShot 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsLJavelinShot;
+	/** 오른쪽 JavelinShot 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsRJavelinShot;
 	/** 일반 공격 패턴 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	bool bIsAttacking;
@@ -62,6 +69,9 @@ public:
 	
 	
 protected:
+	/** 발사할 유도 미사일 클래스 정보 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TSubclassOf<AHomingProjectile> HomingClass;
 	/** 발사할 폭탄 클래스 정보 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
 	TSubclassOf<ABombProjectile> BombClass;
@@ -158,6 +168,10 @@ private:
 	FTimerHandle FlamePatternTimer;
 	/** Flame 패턴을 반복할 타이머 */
 	FTimerHandle FlameRepeatTimer;
+	/** LJavelinShot 패턴을 반복할 타이머 */
+	FTimerHandle LJavelinRepeatTimer;
+	/** RJavelinShot 패턴을 반복할 타이머 */
+	FTimerHandle RJavelinRepeatTimer;
 	/** Buster 패턴을 측정할 타이머 */
 	FTimerHandle BusterPatternTimer;
 	/** 일반 공격 패턴을 측정할 타이머 */
@@ -168,6 +182,10 @@ private:
 	TArray<FTransform> RocketSocketTransforms;
 	/** Flame 반복 횟수 측정 */
 	int32 FlameRepeatCount;
+	/** LJavelinShot 반복 횟수 측정 */
+	int32 LJavelinRepeatCount;
+	/** RJavelinShot 반복 횟수 측정 */
+	int32 RJavelinRepeatCount;
 	/** Spawn 시킬 Mine의 위치 Index */
 	int32 MineLocationIndex;
 
@@ -192,12 +210,22 @@ public:
 	/** 일반 공격 패턴 타이머 활성화 함수 */
 	UFUNCTION(BlueprintCallable)
 	void SetNormalAttackTimer();
-	/** SlugShot 로직 구현 */
+	/** 왼쪽 SlugShot 로직 구현 */
 	UFUNCTION(BlueprintCallable)
 	void LSlugShot();
-	/** SlugShot 로직 구현 */
+	/** 오른쪽 SlugShot 로직 구현 */
 	UFUNCTION(BlueprintCallable)
 	void RSlugShot();
+	/** 왼쪽 JavelinShot 타이머 활성화 */
+	UFUNCTION(BlueprintCallable)
+	void LJavelinShotStart();
+	/** 왼쪽 JavelinShot 로직 구현 */
+	void LJavelinShot();
+	/** 오른쪽 JavelinShot 타이머 활성화 */
+	UFUNCTION(BlueprintCallable)
+	void RJavelinShotStart();
+	/** 오른쪽 JavelinShot 로직 구현 */
+	void RJavelinShot();
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */

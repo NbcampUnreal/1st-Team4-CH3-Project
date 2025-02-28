@@ -8,6 +8,7 @@
 #include "TheFourthDescendant/Gimmic/SpawnVolume.h"
 #include "TheFourthDescendant/Item/MineItem/MineItem.h"
 #include "TheFourthDescendant/Monster/Projectile/BombProjectile.h"
+#include "TheFourthDescendant/Monster/Projectile/HomingProjectile.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Monster/Projectile/ProjectileBase.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
@@ -24,6 +25,8 @@ ABoss::ABoss()
 	bIsLSlugShot = false;
 	bIsRSlugShot = false;
 	bIsBusterTimerTriggered = false;
+	LJavelinRepeatCount = 0;
+	RJavelinRepeatCount = 0;
 	MineLocationIndex = 0;
 	FlameRepeatCount = 0;
 	AttackPower = 0;
@@ -359,7 +362,6 @@ void ABoss::LSlugShot()
 	// 왼쪽 팔이 사격 상태라면 왼쪽 총구에서 발사
 	if (bIsLSlugShot)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "L Slug");
 		FVector LeftMuzzleLocation = Mesh->GetSocketLocation(FName("L_MuzzleSocket"));
 		FVector LTargetDirection = (PlayerLocation - LeftMuzzleLocation).GetSafeNormal();
 		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, LeftMuzzleLocation, FRotator::ZeroRotator);
@@ -377,11 +379,80 @@ void ABoss::RSlugShot()
 	// 오른쪽 팔이 사격 상태라면 오른쪽 총구에서 발사
 	if (bIsRSlugShot)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "R Slug");
 		FVector RightMuzzleLocation = Mesh->GetSocketLocation(FName("R_MuzzleSocket"));
 		FVector RTargetDirection = (PlayerLocation - RightMuzzleLocation).GetSafeNormal();
 		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, RightMuzzleLocation, FRotator::ZeroRotator);
 		Projectile->Fire(RTargetDirection);
+	}
+}
+
+void ABoss::LJavelinShotStart()
+{
+	GetWorldTimerManager().SetTimer(
+		LJavelinRepeatTimer,
+		this,
+		&ABoss::LJavelinShot,
+		0.4f,
+		true);
+}
+
+
+void ABoss::LJavelinShot()
+{
+	FString SocketName = FString::Printf(TEXT("MissileSocket_L%d"), LJavelinRepeatCount+1);
+	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
+
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
+	HomingClass,
+	SocketTransform.GetLocation(),
+	FRotator::ZeroRotator);
+
+	FVector LaunchDirection = FVector(0, -1, 1); 
+
+	HomingProjectile->Fire(LaunchDirection);
+
+	++LJavelinRepeatCount;
+
+	if (LJavelinRepeatCount >=  5)
+	{
+		LJavelinRepeatCount = 0;
+		GetWorldTimerManager().ClearTimer(LJavelinRepeatTimer);
+	}
+	
+}
+
+void ABoss::RJavelinShotStart()
+{
+	GetWorldTimerManager().SetTimer(
+		RJavelinRepeatTimer,
+		this,
+		&ABoss::RJavelinShot,
+		0.4f,
+		true);
+}
+
+void ABoss::RJavelinShot()
+{
+	FString SocketName = FString::Printf(TEXT("MissileSocket_R%d"), RJavelinRepeatCount+1);
+	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
+
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
+	HomingClass,
+	SocketTransform.GetLocation(),
+	FRotator::ZeroRotator);
+
+	FVector LaunchDirection = FVector(0, -1, 1); 
+
+	HomingProjectile->Fire(LaunchDirection);
+
+	++RJavelinRepeatCount;
+
+	if (RJavelinRepeatCount >=  5)
+	{
+		RJavelinRepeatCount = 0;
+		GetWorldTimerManager().ClearTimer(RJavelinRepeatTimer);
 	}
 }
 
