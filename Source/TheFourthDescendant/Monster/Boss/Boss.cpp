@@ -119,6 +119,9 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+	// 스폰 중이거나 사망했을 경우 return
+	if (!bIsSpawned || bIsDead) return 0;
+	
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
 	
 	// @To-do 쉴드 50%, 0%, 체력 75% 때 그로기 패턴 추가
@@ -138,6 +141,9 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 
 void ABoss::OnDeath()
 {
+	// 사망했을 경우 return
+	if (bIsDead) return;
+	
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Boss OnDeath");
 
 	// 체력 0으로 초기화 및 콜리전 비활성화

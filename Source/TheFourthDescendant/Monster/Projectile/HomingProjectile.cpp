@@ -86,6 +86,8 @@ void AHomingProjectile::OnOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 				}
 			}
 
+			UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
+
 			Destroy();
 		}
 
