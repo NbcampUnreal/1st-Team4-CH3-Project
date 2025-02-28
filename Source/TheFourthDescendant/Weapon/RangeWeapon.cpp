@@ -51,7 +51,7 @@ FShootResult ARangeWeapon::PerformAttack()
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, TargetEnd, ECollisionChannel::ECC_Pawn, EnemyQueryParams))
 		{
 			if (AActor* HitActor = HitResult.GetActor();
-				HitActor && HitActor->IsA(AMonster::StaticClass()))
+				HitActor && HitActor->IsA(ACharacterBase::StaticClass()))
 			{
 				UGameplayStatics::ApplyDamage(HitActor, WeaponAttackPower, PlayerController, this, UDamageType::StaticClass());
 				ShootResult.bShouldHitMarkerOn = true;
