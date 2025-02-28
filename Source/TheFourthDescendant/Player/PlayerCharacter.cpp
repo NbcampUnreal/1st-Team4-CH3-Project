@@ -9,6 +9,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Tests/AutomationCommon.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -29,6 +31,9 @@ APlayerCharacter::APlayerCharacter()
 	CameraComponent->bUsePawnControlRotation = false;
 
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+
+	StateMachineContext.Character = this;
+	StateMachineContext.Weapon = nullptr;
 	
 	Status.WalkSpeed = 600.0f;
 	SprintSpeed = 1200.0f;
@@ -45,6 +50,12 @@ APlayerCharacter::APlayerCharacter()
 	bIsUpperBodyActive = false;
 	bIsOnAttackAnimState = false;
 
+	DodgeSpeed = 2000.0f;
+	
+	DodgeUpdateInterval = 0.01f;
+	DodgeElapsedTime = 0.0f;
+	DodgeDirection = FVector::ZeroVector;
+	
 	ReloadUIUpdateInterval = 0.1f;
 	ReloadElapsedTime = 0.0f;
 
@@ -275,6 +286,7 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	}
 
 	CurrentWeapon = Weapon;
+	StateMachineContext.Weapon = Weapon;
 	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
 	
 	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
@@ -311,7 +323,7 @@ void APlayerCharacter::PlayFootStepSound()
 	LastFootStepTime = GetWorld()->GetTimeSeconds();
 	
 	const float Speed = GetVelocity().Size();
-	USoundBase* FootStepSound = nullptr;
+	USoundBase* FootStepSound;
 	if (Speed < 250.f)
 	{
 		FootStepSound = WalkFootStepSound;
@@ -335,6 +347,8 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	StateMachineContext.AmmoInventory = &AmmoInventory;
+	
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
@@ -394,7 +408,7 @@ void APlayerCharacter::UpdateYawControl()
 
 void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
 {
-	if (bIsManualAiming && !bIsUpperBodyActive)
+	if (bIsManualAiming && !bIsUpperBodyActive && !bIsFullBodyActive)
 	{
 		SpringArmComponent->TargetArmLength = FMath::FInterpTo(SpringArmComponent->TargetArmLength, AimSpringArmLength, DeltaSeconds, ZoomInterpSpeed);
 	}
@@ -440,7 +454,7 @@ void APlayerCharacter::Landed(const FHitResult& Hit)
 bool APlayerCharacter::CanFire() const
 {
 	if (!CurrentWeapon || !bIsOnAttackAnimState) return false;
-	if (bIsUpperBodyActive) return false;
+	if (bIsUpperBodyActive || bIsFullBodyActive) return false;
 
 	// !!! Warning
 	// 원래라면 이 부분은 애니메이션 슬롯을 확인해서 작동해야 한다.
@@ -463,6 +477,80 @@ bool APlayerCharacter::CanFire() const
 	// }
 
 	return true;
+}
+
+UAnimMontage* APlayerCharacter::GetDodgeMontage(const FVector& LocalDodgeDirection) const
+{
+	// 단순한 각도 계산은 부동 소수점 이슈로 정확하게 일치하지 않을 수 있다.
+	// 8방향에 대해서 내적을 수행하면 가장 일치하는 방향을 찾을 수 있다.
+	static const FVector CardinalDirs[8] = {
+		FVector(1.0f, 0.0f, 0.0f),		// Forward
+		FVector(1.0f, 1.0f, 0.0f).GetSafeNormal(), // Forward Right
+		FVector(0.0f, 1.0f, 0.0f), // Right
+		FVector(-1.0f, 1.0f, 0.0f).GetSafeNormal(), // Backward Right
+		FVector(-1.0f, 0.0f, 0.0f), // Backward
+		FVector(-1.0f, -1.0f, 0.0f).GetSafeNormal(), // Backward Left
+		FVector(0.0f, -1.0f, 0.0f), // Left
+		FVector(1.0f, -1.0f, 0.0f).GetSafeNormal() // Forward Left
+	};
+	
+	float MaxDot = -1.0f;
+	int MaxIndex = 0;
+	for (int32 i = 0; i < 8; ++i)
+	{
+		float Dot = FVector::DotProduct(LocalDodgeDirection, CardinalDirs[i]);
+		if (Dot > MaxDot)
+		{
+			MaxDot = Dot;
+			MaxIndex = i;
+		}
+	}
+
+	switch (MaxIndex)
+	{
+	case 0:
+		return DodgeForwardMontage;
+	case 1:
+		return DodgeForwardRightMontage;
+	case 2:
+		return DodgeRightMontage;
+	case 3:
+		return DodgeBackwardRightMontage;
+	case 4:
+		return DodgeBackwardMontage;
+	case 5:
+		return DodgeBackwardLeftMontage;
+	case 6:
+		return DodgeLeftMontage;
+	case 7:
+		return DodgeForwardLeftMontage;
+	default:
+		return DodgeForwardMontage;
+	}
+}
+
+void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
+{
+	bIsFullBodyActive = false;
+
+	UE_LOG(LogTemp, Display, TEXT("Dodge Montage Ended"));
+	
+	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
+}
+
+void APlayerCharacter::OnDodgeUpdate()
+{
+	DodgeElapsedTime += DodgeUpdateInterval;
+
+	const float PlayLengthWithoutBlending = CurrentDodgeMontage->GetPlayLength() - CurrentDodgeMontage->GetDefaultBlendOutTime();
+	const float Alpha = DodgeElapsedTime / PlayLengthWithoutBlending;
+	const float CurveValue = DodgeCurve.GetRichCurve()->Eval(Alpha);
+	FVector DodgeVelocity = DodgeDirection * DodgeSpeed * CurveValue;
+	
+	FVector CurrentVelocity = GetVelocity();
+
+	DodgeVelocity.Z = CurrentVelocity.Z;
+	GetCharacterMovement()->Velocity = DodgeVelocity;
 }
 
 void APlayerCharacter::InitAmmoInventory()
@@ -509,6 +597,8 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
+	// 전체 몸이 사용 중이면 이동을 할 수 없다.
+	if (bIsFullBodyActive) return;
 
 	const FVector2D MoveInput = Value.Get<FVector2D>();
 	const FRotator ControllerRotator = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
@@ -582,6 +672,38 @@ void APlayerCharacter::ToggleSprint(const FInputActionValue& Value)
 
 void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
+	// 점프 중에는 회피를 할 수 없다.
+	if (GetMovementComponent()->IsFalling()) return;
+	if (bIsFullBodyActive) return;;
+	
+	bIsFullBodyActive = true;
+	// @To-DO : 콜리전 끄기(적 공격 회피)
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+	// 구르기 방향을 결정, 이동 방향이 없으면 앞으로 구르기
+	DodgeDirection = GetLastMovementInputVector().GetSafeNormal();
+	if (DodgeDirection.IsNearlyZero())
+	{
+		DodgeDirection = GetActorForwardVector();
+	}
+	const FVector LocalDodgeDirection = GetTransform().InverseTransformVector(DodgeDirection).GetSafeNormal();
+	
+	UAnimMontage* DodgeMontage = GetDodgeMontage(LocalDodgeDirection);
+	CurrentDodgeMontage = DodgeMontage;
+
+	if (AnimInstance && DodgeMontage)
+	{
+		AnimInstance->Montage_Play(DodgeMontage);
+
+		// BlendOut이 되면서 이동이 시작되어야 하므로 End 시점이 아니라 BlendOut시점에서 구르기를 종료한다.
+		FOnMontageBlendingOutStarted MontageBlendingOutDelegate;
+		MontageBlendingOutDelegate.BindUObject(this, &APlayerCharacter::OnDodgeMontageEnded);
+		AnimInstance->Montage_SetBlendingOutDelegate(MontageBlendingOutDelegate);
+		
+		DodgeElapsedTime = 0.0f;
+		GetWorldTimerManager().SetTimer(DodgeUpdateTimerHandle, this, &APlayerCharacter::OnDodgeUpdate, DodgeUpdateInterval, true);
+	}
 }
 
 void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
@@ -640,7 +762,7 @@ void APlayerCharacter::StopAim(const FInputActionValue& Value)
 void APlayerCharacter::Reload(const FInputActionValue& Value)
 {
 	// 상태가 많아지고 있다. FSM 사용을 고려할 것
-	if (!Controller || !CurrentWeapon || bIsReloading) return;
+	if (!Controller || !CurrentWeapon || bIsReloading || bIsFullBodyActive) return;
 	if (CurrentWeapon->IsMagazineFull() || AmmoInventory[CurrentWeapon->GetAmmoType()] <= 0) return;
 
 	bIsReloading = true;

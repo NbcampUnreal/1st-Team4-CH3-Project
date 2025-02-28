@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "NiagaraSystem.h"
 #include "WeaponBase.generated.h"
+
+class UNiagaraSystem;
 
 UENUM(BlueprintType)
 enum class EAmmoType : uint8
