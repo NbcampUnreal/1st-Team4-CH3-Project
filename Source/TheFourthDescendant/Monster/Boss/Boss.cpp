@@ -17,6 +17,8 @@
 #pragma region InitComponent
 ABoss::ABoss()
 {
+	FirstGroggyType = EBossGroggyType::Default;
+	SecondGroggyType = EBossGroggyType::Default;
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
@@ -117,22 +119,17 @@ void ABoss::BeginPlay()
 float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
                         class AController* EventInstigator, AActor* DamageCauser)
 {
-	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	// 스폰 중이거나 사망했을 경우 return
 	if (!bIsSpawned || bIsDead) return 0;
+
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
 	
-	// @To-do 쉴드 50%, 0%, 체력 75% 때 그로기 패턴 추가
-	if (Status.Health <= 0)
-	{
-		OnDeath();
-
-		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
-		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
-		MainGameState->EndLevel();
-	}
+	IsCurrentHealthZero();
+	IsFirstGroggyTriggered();
+	IsSecondGroggyTriggered();
 
 	return ActualDamage;
 }
@@ -172,14 +169,10 @@ void ABoss::MoveToTarget()
 	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
 
 	AddMovementInput(Direction, 1.0f);
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Target Movement Input");
-	
 }
 
 void ABoss::MoveHorizontal(int32& Direction)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Horizontal");
-
 	// 움직일 방향벡터 선언
 	FVector DirectionVector = FVector::ZeroVector;
 	
@@ -200,14 +193,11 @@ void ABoss::MoveHorizontal(int32& Direction)
 
 void ABoss::MoveBack()
 {
-
 	// 보스의 후방 벡터 반환
 	FVector BackDirection = -GetActorForwardVector();
 	
 	// 뒤로 이동
 	AddMovementInput(BackDirection, 1.0f);
-
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Move Back");
 }
 
 
@@ -583,6 +573,63 @@ void ABoss::SetNormalAttackTimer()
 		);
 }
 
+
+void ABoss::IsFirstGroggyTriggered()
+{
+	// 첫 번째 그로기가 출력된 경우 return
+	if (FirstGroggyType == EBossGroggyType::Actioned) return;
+	
+	// 첫 번째 그로기가 트리거 됐고, 보스가 그로기가 가능한 상태인 경우
+	if (FirstGroggyType == EBossGroggyType::Triggered && bIsAttacking)
+	{
+		bIsGroggy = true;
+		FirstGroggyType = EBossGroggyType::Actioned;
+	}
+
+	// 현재 쉴드량이 최대 쉴드량의 절반 이하인지 확인
+	if (Status.Shield <= Status.MaxShield / 2)
+	{
+		if (FirstGroggyType == EBossGroggyType::Default)
+		{
+			FirstGroggyType = EBossGroggyType::Triggered;
+		}
+	}
+}
+
+void ABoss::IsSecondGroggyTriggered()
+{
+	// 첫 번째 그로기가 출력된 적이 없거나, 두 번째 그로기가 출력된 적이 있는 경우 return
+	if (FirstGroggyType != EBossGroggyType::Actioned ||
+		SecondGroggyType == EBossGroggyType::Actioned) return;
+	
+	// 두 번째 그로기가 트리거 됐고, 보스가 그로기가 가능한 상태인 경우
+	if (SecondGroggyType == EBossGroggyType::Triggered && bIsAttacking)
+	{
+		bIsGroggy = true;
+		SecondGroggyType = EBossGroggyType::Actioned;
+	}
+
+	// 현재 쉴드량이 0 이하인지 확인
+	if (Status.Shield <= 0)
+	{
+		if (SecondGroggyType == EBossGroggyType::Default)
+		{
+			SecondGroggyType = EBossGroggyType::Triggered;
+		}
+	}
+}
+
+void ABoss::IsCurrentHealthZero()
+{
+	if (Status.Health <= 0)
+	{
+		OnDeath();
+		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
+		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
+		MainGameState->EndLevel();
+	}
+}
+
 #pragma endregion
 
 #pragma region InitMovementState Functions
@@ -660,7 +707,6 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 	}
 
 }
-
 
 
 void ABoss::SetMoveState()
