@@ -211,13 +211,14 @@ public:
 	* 스폰 이후 블루프린트에서 호출 */
 	UFUNCTION(BlueprintCallable)
 	void InitMovementStateToIdle();
-	
-private:
-	/** Blackboard의 이동 상태 관련 bool 변수 초기화 */
-	void InitBlackboardMovementFlag(const EBossMovementState State);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+private:
+	/** Blackboard의 이동 상태 관련 bool 변수 초기화 */
+	void InitBlackboardMovementFlag(const EBossMovementState State);
+	
 
 };

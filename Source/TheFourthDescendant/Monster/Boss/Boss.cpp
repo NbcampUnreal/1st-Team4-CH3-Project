@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 #include "TheFourthDescendant/Gimmic/SpawnVolume.h"
 #include "TheFourthDescendant/Item/MineItem/MineItem.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
@@ -112,10 +113,16 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
+	
 	// @To-do 쉴드 50%, 0%, 체력 75% 때 그로기 패턴 추가
 	if (Status.Health <= 0)
 	{
 		OnDeath();
+
+		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
+		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
+		MainGameState->EndLevel();
 	}
 
 	return ActualDamage;
