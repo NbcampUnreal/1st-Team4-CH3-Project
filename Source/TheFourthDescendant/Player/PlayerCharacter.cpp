@@ -227,7 +227,7 @@ void APlayerCharacter::IncreaseHealth(const int Amount)
 	Status.Health += Amount;
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 void APlayerCharacter::DecreaseHealth(const int Amount)
@@ -238,7 +238,7 @@ void APlayerCharacter::DecreaseHealth(const int Amount)
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
 	// 사망 처리
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 void APlayerCharacter::IncreaseShield(const int Amount)
@@ -248,7 +248,7 @@ void APlayerCharacter::IncreaseShield(const int Amount)
 	Status.Shield += Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
 
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 void APlayerCharacter::DecreaseShield(const int Amount)
@@ -258,7 +258,7 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	Status.Shield -= Amount;
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
 
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -273,7 +273,7 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	}
 
 	// 사망 처리
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -361,7 +361,7 @@ void APlayerCharacter::BeginPlay()
 		}
 	}
 
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -369,7 +369,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	OnHealthAndShieldChanged.Broadcast(Status.Health, Status.Shield);
+	OnTakeDamage.Broadcast(FDamageInfo(Status));
 	if (Status.Health <= 0)
 	{
 		// 사망 처리

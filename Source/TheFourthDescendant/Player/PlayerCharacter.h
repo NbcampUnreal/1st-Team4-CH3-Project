@@ -17,6 +17,49 @@ struct FStateMachineContext
 	TMap<EAmmoType, int32>* AmmoInventory;
 };
 
+USTRUCT(BlueprintType)
+struct FDamageInfo
+{
+	GENERATED_BODY()
+
+	FDamageInfo()
+		: MaxHealth(0.f), MaxShield(0.f), Health(0.f), Shield(0.f), LostShield(0.f), LostHealth(0.f) {}
+	FDamageInfo(const FStatus& Status)
+		: MaxHealth(Status.MaxHealth), MaxShield(Status.MaxShield), Health(Status.Health), Shield(Status.Shield), LostShield(0.f), LostHealth(0.f) {}
+	UPROPERTY(BlueprintReadOnly)
+	float MaxHealth;
+	UPROPERTY(BlueprintReadOnly)
+	float MaxShield;
+	UPROPERTY(BlueprintReadOnly)
+	float Health;
+	UPROPERTY(BlueprintReadOnly)
+	float Shield;
+	UPROPERTY(BlueprintReadOnly)
+	float LostShield;
+	UPROPERTY(BlueprintReadOnly)
+	float LostHealth;
+};
+
+USTRUCT(BlueprintType)
+struct FDurableChangeInfo
+{
+	GENERATED_BODY()
+
+	FDurableChangeInfo()
+		: MaxHealth(0.f), Health(0.f), MaxShield(0.f), Shield(0.f) {}
+	FDurableChangeInfo(const FStatus& Status)
+		: MaxHealth(Status.MaxHealth), Health(Status.Health), MaxShield(Status.MaxShield), Shield(Status.Shield) {}
+	
+	UPROPERTY(BlueprintReadOnly)
+	float MaxHealth;
+	UPROPERTY(BlueprintReadOnly)
+	float Health;
+	UPROPERTY(BlueprintReadOnly)
+	float MaxShield;
+	UPROPERTY(BlueprintReadOnly)
+	float Shield;
+};
+
 /**
  * 플레이어 캐릭터 클래스
  * 캐릭터는 다음과 같은 상태를 가진다.
@@ -37,8 +80,12 @@ public:
 	
 	APlayerCharacter();
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthAndShieldChanged, int, Health, int, Shield);
-	/** 체력이나 실드가 변경되었을 때 호출되는 이벤트 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTakeDamage, FDamageInfo, DamageInfo);
+	/** 피격되었을 때 호출되는 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnTakeDamage OnTakeDamage;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthAndShieldChanged, FDurableChangeInfo, HealthAndShield);
+	/** 피격 없이 체력이나 실드량이 변경됬을 때 호출되는 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnHealthAndShieldChanged OnHealthAndShieldChanged;
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipWeapon, AWeaponBase*, Weapon);
@@ -213,7 +260,7 @@ public:
 	 * 실드량만을 감소시키며 초과 피해를 체력에 영향을 주고 싶을 경우는 ApplyDamage를 호출 */
 	UFUNCTION(BlueprintCallable)
 	void DecreaseShield(const int Amount);
-	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소 */
+	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소, 대미지가 아니고 바로 호출되는 것에 유의 */
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
 
