@@ -2,6 +2,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/GameManager/MainGameStateBase.h"
@@ -399,25 +400,32 @@ void ABoss::LJavelinShotStart()
 
 void ABoss::LJavelinShot()
 {
+	// 왼쪽 어깨 미사일 Socket 반환
 	FString SocketName = FString::Printf(TEXT("MissileSocket_L%d"), LJavelinRepeatCount+1);
 	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
 
-	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
-	HomingClass,
-	SocketTransform.GetLocation(),
-	FRotator::ZeroRotator);
+	// Homing Projectile 생성
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(HomingClass,SocketTransform.GetLocation(),FRotator::ZeroRotator);
 
+	// 방향벡터 설정
 	FVector LaunchDirection = FVector(0, -1, 1); 
 
+	// 발사
 	HomingProjectile->Fire(LaunchDirection);
-
+	
+	// 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, JavelinSound, GetActorLocation());
+	
+	// 발사한 탄환 수 1개 증가
 	++LJavelinRepeatCount;
 
+	// 모두 발사한 경우 변수 및 타이머 초기화
 	if (LJavelinRepeatCount >=  5)
 	{
 		LJavelinRepeatCount = 0;
 		GetWorldTimerManager().ClearTimer(LJavelinRepeatTimer);
+		SetNormalAttackTimer();
+		bIsLJavelinShot = false;
 	}
 	
 }
@@ -434,25 +442,32 @@ void ABoss::RJavelinShotStart()
 
 void ABoss::RJavelinShot()
 {
+	// 오른쪽 어깨 미사일 Socket 위치 반환
 	FString SocketName = FString::Printf(TEXT("MissileSocket_R%d"), RJavelinRepeatCount+1);
 	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
 
-	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
-	HomingClass,
-	SocketTransform.GetLocation(),
-	FRotator::ZeroRotator);
+	// Homing Projectile 생성
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(HomingClass, SocketTransform.GetLocation(),FRotator::ZeroRotator);
 
+	// 방향벡터 설정
 	FVector LaunchDirection = FVector(0, -1, 1); 
 
+	// 발사
 	HomingProjectile->Fire(LaunchDirection);
 
+	// 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, JavelinSound, GetActorLocation());
+
+	// 발사한 탄환 수 1개 증가
 	++RJavelinRepeatCount;
 
+	// 모두 발사한 경우 변수 및 타이머 초기화
 	if (RJavelinRepeatCount >=  5)
 	{
 		RJavelinRepeatCount = 0;
 		GetWorldTimerManager().ClearTimer(RJavelinRepeatTimer);
+		SetNormalAttackTimer();
+		bIsRJavelinShot = false;
 	}
 }
 

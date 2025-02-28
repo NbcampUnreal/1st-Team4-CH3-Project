@@ -69,6 +69,9 @@ public:
 	
 	
 protected:
+	/** Javelin 발사 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pattern|Sound")
+	class USoundCue* JavelinSound;
 	/** 발사할 유도 미사일 클래스 정보 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
 	TSubclassOf<AHomingProjectile> HomingClass;
