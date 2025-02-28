@@ -4,6 +4,7 @@
 #include "WeaponBase.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 FShootResult::FShootResult()
 {
@@ -95,6 +96,27 @@ void AWeaponBase::Attack()
 		UGameplayStatics::PlaySoundAtLocation(this, FireSfx, GetActorLocation());
 	}
 
+	if (MuzzleFlashVfx)
+	{
+		const FVector MuzzleLocation = WeaponMesh->GetSocketLocation(FName(GetMuzzleSocketName()));
+		const FRotator MuzzleRotation = WeaponMesh->GetSocketRotation(FName(GetMuzzleSocketName()));
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			MuzzleFlashVfx,
+			MuzzleLocation,
+			MuzzleRotation
+		);
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			MuzzleFlashVfx,
+			WeaponMesh,
+			FName(GetMuzzleSocketName()),
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::Type::SnapToTarget,
+			true
+		);
+	}
+	
 	if (FireCameraShake)
 	{
 		// @Improve : Recoil에 따라 카메라 쉐이크의 강도를 강하게 적용하도록 수정
