@@ -533,8 +533,6 @@ void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInte
 {
 	bIsFullBodyActive = false;
 
-	UE_LOG(LogTemp, Display, TEXT("Dodge Montage Ended"));
-	
 	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
 }
 
