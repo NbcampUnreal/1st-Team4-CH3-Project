@@ -7,7 +7,9 @@
 #include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 #include "TheFourthDescendant/Gimmic/SpawnVolume.h"
 #include "TheFourthDescendant/Item/MineItem/MineItem.h"
+#include "TheFourthDescendant/Monster/Projectile/BombProjectile.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
+#include "TheFourthDescendant/Monster/Projectile/ProjectileBase.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
 #pragma region InitComponent
@@ -347,10 +349,40 @@ void ABoss::Buster()
 #pragma endregion
 
 #pragma region Normal Attack Pattern
-
-void ABoss::SlugShot()
+void ABoss::LSlugShot()
 {
-	// 대포 발사하는 로직
+	if (Player == nullptr) return;
+
+	// 플레이어 위치 반환
+	FVector PlayerLocation = Player->GetActorLocation();
+	
+	// 왼쪽 팔이 사격 상태라면 왼쪽 총구에서 발사
+	if (bIsLSlugShot)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "L Slug");
+		FVector LeftMuzzleLocation = Mesh->GetSocketLocation(FName("L_MuzzleSocket"));
+		FVector LTargetDirection = (PlayerLocation - LeftMuzzleLocation).GetSafeNormal();
+		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, LeftMuzzleLocation, FRotator::ZeroRotator);
+		Projectile->Fire(LTargetDirection);
+	}
+}
+
+void ABoss::RSlugShot()
+{
+	if (Player == nullptr) return;
+
+	// 플레이어 위치 반환
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 오른쪽 팔이 사격 상태라면 오른쪽 총구에서 발사
+	if (bIsRSlugShot)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "R Slug");
+		FVector RightMuzzleLocation = Mesh->GetSocketLocation(FName("R_MuzzleSocket"));
+		FVector RTargetDirection = (PlayerLocation - RightMuzzleLocation).GetSafeNormal();
+		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, RightMuzzleLocation, FRotator::ZeroRotator);
+		Projectile->Fire(RTargetDirection);
+	}
 }
 
 #pragma endregion
@@ -440,12 +472,14 @@ void ABoss::SetNormalAttackTimer()
 		NormalPatternTimer,
 		[this]()
 		{
-			Blackboard->SetValueAsBool(FName("IsAttacking"), false);
+			bIsAttacking = false;
+			Blackboard->SetValueAsBool(FName("IsAttacking"), bIsAttacking);
 		},
 		PatternInterval,
 		false
 		);
 }
+
 #pragma endregion
 
 #pragma region InitMovementState Functions

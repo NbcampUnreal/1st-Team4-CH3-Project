@@ -6,6 +6,8 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "Boss.generated.h"
 
+class ABombProjectile;
+class AProjectileBase;
 class ASpawnVolume;
 class AMineItem;
 class AMissileProjectile;
@@ -33,6 +35,8 @@ public:
 	ABoss();
 	
 public:
+	/** Bone 회전을 위한 SkeletalMesh 선언 */
+	USkeletalMeshComponent* Mesh;
 	/** 현재 적의 이동 상태 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	EBossMovementState MovementState;
@@ -51,8 +55,16 @@ public:
 	/** 오른쪽 SlugShot 패턴 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	bool bIsRSlugShot;
+	/** 일반 공격 패턴 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsAttacking;
+
+	
 	
 protected:
+	/** 발사할 폭탄 클래스 정보 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
+	TSubclassOf<ABombProjectile> BombClass;
 	/** 발사할 미사일 클래스 정보 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
 	TSubclassOf<AMissileProjectile> MissileClass;
@@ -152,8 +164,6 @@ private:
 	FTimerHandle NormalPatternTimer;
 	/** Possess 중인 AAIContoller */
 	ABossController* BossController;
-	/** Bone 회전을 위한 SkeletalMesh 선언 */
-	USkeletalMeshComponent* Mesh;
 	/** 로켓을 발사할 소켓의 위치 정보 */
 	TArray<FTransform> RocketSocketTransforms;
 	/** Flame 반복 횟수 측정 */
@@ -184,7 +194,10 @@ public:
 	void SetNormalAttackTimer();
 	/** SlugShot 로직 구현 */
 	UFUNCTION(BlueprintCallable)
-	void SlugShot();
+	void LSlugShot();
+	/** SlugShot 로직 구현 */
+	UFUNCTION(BlueprintCallable)
+	void RSlugShot();
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
