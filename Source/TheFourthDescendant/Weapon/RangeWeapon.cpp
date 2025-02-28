@@ -57,7 +57,6 @@ FShootResult ARangeWeapon::PerformAttack()
 				ShootResult.bShouldHitMarkerOn = true;
 			}
 		}
-		DrawLineTraces(GetWorld(), MuzzleLocation, TargetEnd, { HitResult }, 5.f);
 	}
 
 	return ShootResult;
