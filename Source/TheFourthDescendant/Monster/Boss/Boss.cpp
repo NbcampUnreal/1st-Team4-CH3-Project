@@ -261,18 +261,9 @@ void ABoss::Buster()
 
 #pragma region Normal Attack Pattern
 
-void ABoss::SlugShotStart()
+void ABoss::SlugShot()
 {
-	if (Mesh == nullptr || Player == nullptr) return;
-
-	FVector LeftBoneLocation = Mesh->GetBoneLocation(FName("Bone_L_arm3"));
-	FVector RightBoneLocation = Mesh->GetBoneLocation(FName("Bone_R_arm3"));
-
-	FVector PlayerLocation = Player->GetActorLocation();
-
-	FRotator LeftBoneTargetRotation = (PlayerLocation - LeftBoneLocation).Rotation();
-	FRotator RightBoneTargetRotation = (PlayerLocation - RightBoneLocation).Rotation();
-
+	// 대포 발사하는 로직
 }
 
 #pragma endregion
@@ -291,6 +282,21 @@ float ABoss::GetDistanceToPlayer()
 	return Dist;
 }
 
+FRotator ABoss::GetBoneRotation(FName BoneName)
+{
+	if (Mesh == nullptr || Player == nullptr) return FRotator();
+
+	// 뼈의 위치 반환
+	FVector BoneLocation = Mesh->GetBoneLocation(BoneName);
+
+	// 플레이어 위치 반환
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 회전 목표 방향벡터 반환
+	FRotator BoneTargetRotation = (PlayerLocation - BoneLocation).GetSafeNormal().Rotation();
+	
+	return BoneTargetRotation;
+}
 
 
 void ABoss::IsInBusterBound(float& Distance)
@@ -325,6 +331,31 @@ void ABoss::IsInBusterBound(float& Distance)
 			bIsBusterTimerTriggered = true;
 		}
 	}
+}
+
+void ABoss::SetNormalAttackTimer()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Normal Start");
+
+	// 중복 활성화 방지
+	GetWorldTimerManager().ClearTimer(NormalPatternTimer);
+	
+	// 일반 공격 패턴 간격에 NormalAttackDeviation 만큼 편차를 둔 난수 생성
+	int PatternInterval = FMath::RandRange(
+		NormalAttackPatternInterval - NormalAttackDeviation,
+		NormalAttackPatternInterval + NormalAttackDeviation
+		);
+	
+	// 공격 상태 해제
+	GetWorldTimerManager().SetTimer(
+		NormalPatternTimer,
+		[this]()
+		{
+			Blackboard->SetValueAsBool(FName("IsAttacking"), false);
+		},
+		PatternInterval,
+		false
+		);
 }
 #pragma endregion
 
