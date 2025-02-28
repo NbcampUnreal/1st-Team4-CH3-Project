@@ -430,14 +430,11 @@ void APlayerCharacter::PlayLandSound()
 void APlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
-
-	if (GetVelocity().Z > -MinFallSpeedForLandSound)
-	{
-		PlayFootStepSound();
-	}
 	
-	// 발소리 겹치지 않도록 다음 다음 시간 간격에 재생하도록 한다.
-	PlayLandSound();
+	if (-GetVelocity().Z > MinFallSpeedForLandSound)
+	{
+		PlayLandSound();
+	}
 }
 
 bool APlayerCharacter::CanFire() const
