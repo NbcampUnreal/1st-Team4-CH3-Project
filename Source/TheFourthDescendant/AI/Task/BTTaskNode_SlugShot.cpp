@@ -18,7 +18,7 @@ EBTNodeResult::Type UBTTaskNode_SlugShot::ExecuteTask(UBehaviorTreeComponent& Ow
 	Boss = Cast<ABoss>(OwnerComp.GetAIOwner()->GetCharacter());
 	if (Boss == nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "MoveBack : Boss Casting Failed !");
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "SlugShot : Boss Casting Failed !");
 		return EBTNodeResult::Failed;
 	}
 
@@ -30,7 +30,7 @@ EBTNodeResult::Type UBTTaskNode_SlugShot::ExecuteTask(UBehaviorTreeComponent& Ow
 	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
 	if (Blackboard == nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "MoveBack : Blackboard Casting Failed !");
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "SlugShot : Blackboard Casting Failed !");
 		return EBTNodeResult::Failed;
 	}
 
