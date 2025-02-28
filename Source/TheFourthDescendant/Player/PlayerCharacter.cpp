@@ -6,11 +6,10 @@
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Tests/AutomationCommon.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -32,8 +31,10 @@ APlayerCharacter::APlayerCharacter()
 
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
-	StateMachineContext.Character = this;
-	StateMachineContext.Weapon = nullptr;
+	bInvincible = false;
+	
+	// StateMachineContext.Character = this;
+	// StateMachineContext.Weapon = nullptr;
 	
 	Status.WalkSpeed = 600.0f;
 	SprintSpeed = 1200.0f;
@@ -220,6 +221,23 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 	UpdateCameraArmLength(DeltaSeconds);	
 }
 
+void APlayerCharacter::SetInvincibility(bool bEnable)
+{
+	bInvincible = bEnable;
+
+	if (bInvincible)
+	{
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+		GetCapsuleComponent()->RecreatePhysicsState();
+		UE_LOG(LogTemp, Warning, TEXT("Set Invincibility"));
+		
+	}
+	else
+	{
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
+	}
+}
+
 void APlayerCharacter::IncreaseHealth(const int Amount)
 {
 	if (Amount <= 0) return;
@@ -286,7 +304,7 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	}
 
 	CurrentWeapon = Weapon;
-	StateMachineContext.Weapon = Weapon;
+	// StateMachineContext.Weapon = Weapon;
 	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
 	
 	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
@@ -347,7 +365,7 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StateMachineContext.AmmoInventory = &AmmoInventory;
+	// StateMachineContext.AmmoInventory = &AmmoInventory;
 	
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
@@ -532,6 +550,7 @@ UAnimMontage* APlayerCharacter::GetDodgeMontage(const FVector& LocalDodgeDirecti
 void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 {
 	bIsFullBodyActive = false;
+	SetInvincibility(false);
 
 	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
 }
@@ -675,7 +694,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	if (bIsFullBodyActive) return;;
 	
 	bIsFullBodyActive = true;
-	// @To-DO : 콜리전 끄기(적 공격 회피)
+	SetInvincibility(true);
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 

@@ -101,7 +101,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
 	bool bIsOnAttackAnimState; 
 protected:
-	FStateMachineContext StateMachineContext;
+	// FStateMachineContext StateMachineContext;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	bool bInvincible;
 	
 	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
@@ -247,6 +250,9 @@ public:
 	 */
 	virtual void Tick(float DeltaSeconds) override;
 
+	UFUNCTION(BlueprintCallable)
+	void SetInvincibility(bool bEnable);
+	
 	/** Amount 만큼 체력을 증가 */
 	UFUNCTION(BlueprintCallable)
 	void IncreaseHealth(const int Amount);
