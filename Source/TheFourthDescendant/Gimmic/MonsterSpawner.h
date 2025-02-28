@@ -40,6 +40,15 @@ protected:
 	TArray<TTuple<EMonsterType, int32>> SecondWaveSpawnData;
 	TArray<TTuple<EMonsterType, int32>> ThirdWaveSpawnData;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	int32 FirstWaveMonsterCount;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	int32 SecondWaveMonsterCount;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	int32 ThirdWaveMeleeCount;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+	int32 ThirdWaveRangedCount;
+
 	/* 스폰시킬 근거리 몬스터 클래스 */	
 	UPROPERTY(EditAnywhere, Category="Spawning")
 	TSubclassOf<AMonster> MeleeMonsterClass;

@@ -13,11 +13,6 @@ AMonsterSpawner::AMonsterSpawner()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 12));
-    SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 12));
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, 10));
-    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, 10));
-
     Levelindex = 0;
     SpawnInterval = 0.2f;
 
@@ -220,6 +215,11 @@ void AMonsterSpawner::SpawnMonsters(int32 LevelIndex)
 void AMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
+
+    FirstWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, FirstWaveMonsterCount));
+    SecondWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, SecondWaveMonsterCount));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Melee, ThirdWaveMeleeCount));
+    ThirdWaveSpawnData.Add(TTuple<EMonsterType, int32>(EMonsterType::Ranged, ThirdWaveRangedCount));
 
 	//SpawnMonsters(Levelindex);
 }
