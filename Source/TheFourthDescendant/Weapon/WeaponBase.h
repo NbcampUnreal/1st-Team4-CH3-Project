@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NiagaraSystem.h"
 #include "WeaponBase.generated.h"
 
 UENUM(BlueprintType)
@@ -33,6 +34,8 @@ class THEFOURTHDESCENDANT_API AWeaponBase : public AActor
 	GENERATED_BODY()
 
 public:
+	// @To-Do Muzzle Flash 같은 효과를 총기 애니메이션 쪽에서 처리할 수 있도록 수정
+	
 	// Sets default values for this actor's properties
 	AWeaponBase();
 
@@ -49,6 +52,7 @@ protected:
 
 	/** 발사 소켓 이름을 반환 */
 	FString GetFireSocketName() const { return FireSocketName; }
+	FString GetMuzzleSocketName() const { return MuzzleFlashSocketName; }
 
 	/** 사격 가능 여부 */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Weapon|Fire")
@@ -85,11 +89,6 @@ protected:
 	/** 발사 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
 	USoundBase* FireSfx;
-	/** 재장전 시작 사운드 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
-	USoundBase* ReloadSfx;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
-	USoundBase* ReloadEndSfx;
 	/** 총알이 없을 때 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Sound")
 	USoundBase* RattleSfx;
@@ -100,11 +99,14 @@ protected:
 	/** 리로드 애니메이션 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UAnimMontage* ReloadMontage;
-	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
+	UNiagaraSystem* MuzzleFlashVfx;
 private:
 	/** 사격이 발생하는 소켓 이름*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
 	FString FireSocketName;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
+	FString MuzzleFlashSocketName;
 	
 public:
 	/** 무기가 사용하는 타입을 반환 */
@@ -123,9 +125,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
 
-	USoundBase* GetReloadSfx() const { return ReloadSfx; }
-	USoundBase* GetReloadEndSfx() const { return ReloadEndSfx; }
-	
 protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */
 	UFUNCTION()

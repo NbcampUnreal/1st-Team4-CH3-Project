@@ -100,6 +100,9 @@ protected:
 	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float FootStepInterval;
+	/** 착지 소리가 들리기 위한 최소 속도, >0, 너무 낮은 높이에서 떨어져도 소리가 재싱되는 현상을 방지*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float MinFallSpeedForLandSound;
 	/** 마지막 발소리 재생 시간, 재생 간격을 위한 변수 */
 	float LastFootStepTime;
 	/** 점프 시에 Skip할 발자국 간격, 점프 이후에 바로 발소리가 출력되어서 소리가 겹치는 현상을 방지*/
@@ -161,7 +164,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
 
-	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. */
+	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. AnimNotify로 BP로 실행 중 */
 	UFUNCTION(BlueprintCallable)
 	void PlayFootStepSound();
 	
@@ -180,6 +183,8 @@ protected:
 	void UpdateCameraArmLength(float DeltaSeconds);
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
+	/** 착지 소리 재생, 착지 속력에 따라 소리를 재생한다. */
+	void PlayLandSound();
 	/** 사격 가능 여부를 확인*/
 	bool CanFire() const;
 

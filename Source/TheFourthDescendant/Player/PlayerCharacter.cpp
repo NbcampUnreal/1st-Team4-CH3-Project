@@ -49,6 +49,7 @@ APlayerCharacter::APlayerCharacter()
 	ReloadElapsedTime = 0.0f;
 
 	FootStepInterval = 0.3f;
+	MinFallSpeedForLandSound = 400.0f;
 
 	Tags.Add(TEXT("Player"));
 }
@@ -403,15 +404,36 @@ void APlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
 	}
 }
 
-void APlayerCharacter::Landed(const FHitResult& Hit)
+void APlayerCharacter::PlayLandSound()
 {
-	Super::Landed(Hit);
+	// 착지 다음에 다음 발소리가 바로 출력되서 소리가 겹치는 것을 방지한다.
+	LastFootStepTime = GetWorld()->GetTimeSeconds() + FootStepInterval * 2;
 
-	// 발소리 겹치지 않도록 다음 다음 시간 간격에 재생하도록 한다.
-	LastFootStepTime = GetWorld()->GetTimeSeconds() + FootStepInterval * 1;
+	// @To-Do : 속도에 따른 착지 소리 재생, 가령 높은 곳에서 추락을 구현 가능
+	// const float FallSpeed = -GetVelocity().Z;
+	// USoundBase* LandSoundToPlay = nullptr;
+	// if (FallSpeed < MinFallSpeedForLandSound)
+	// {
+	// 	LandSoundToPlay = nullptr;
+	// }
+	// else
+	// {
+	// 	LandSoundToPlay = LandSound;
+	// }
+	
 	if (LandSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
+	}
+}
+
+void APlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	
+	if (-GetVelocity().Z > MinFallSpeedForLandSound)
+	{
+		PlayLandSound();
 	}
 }
 
