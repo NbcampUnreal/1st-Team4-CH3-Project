@@ -1,6 +1,7 @@
 #include "BTTaskNode_SlugShot.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Monster/Boss/Boss.h"
 
 UBTTaskNode_SlugShot::UBTTaskNode_SlugShot()
@@ -34,8 +35,8 @@ EBTNodeResult::Type UBTTaskNode_SlugShot::ExecuteTask(UBehaviorTreeComponent& Ow
 	}
 
 	// 보스가 공격 중임을 알림
-	Blackboard->SetValueAsBool(FName("IsAttacking"), true);
-	
+	Boss->bIsAttacking = true;
+	Blackboard->SetValueAsBool(FName("IsAttacking"), Boss->bIsAttacking);
 	
 	return EBTNodeResult::Succeeded;
 }
