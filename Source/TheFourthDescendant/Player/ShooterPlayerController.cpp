@@ -20,10 +20,9 @@ void AShooterPlayerController::BeginPlay()
 	// 이 시점에는 이미 Pawn이 존재하므로 연결이 가능하다.
 	UE_LOG(LogTemp, Warning, TEXT("AShooterPlayerController::BeginPlay"));
 	
-	if (ULocalPlayer* LocalPlayer = GetLocalPlayer();
-		UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
 	{
-		if (InputMappingContext)
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
 			Subsystem->AddMappingContext(InputMappingContext, 0);
 		}
