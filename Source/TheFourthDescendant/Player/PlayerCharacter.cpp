@@ -603,7 +603,7 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	bIsUpperBodyActive = false;
 	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
-	if (CurrentWeapon)
+	if (CurrentWeapon && !bInterrupted)
 	{
 		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
