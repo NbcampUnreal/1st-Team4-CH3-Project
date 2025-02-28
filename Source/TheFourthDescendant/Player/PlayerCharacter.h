@@ -8,16 +8,34 @@
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 #include "PlayerCharacter.generated.h"
 
+class APlayerCharacter;
 struct FInputActionValue;
+struct FStateMachineContext
+{
+	APlayerCharacter* Character;
+	AWeaponBase* Weapon;
+	TMap<EAmmoType, int32>* AmmoInventory;
+};
 
+/**
+ * 플레이어 캐릭터 클래스
+ * 캐릭터는 다음과 같은 상태를 가진다.
+ * - Locomotion : 이동, 점프, 사격이 가능
+ * - Reload(UpperBody) : 상체만 재장전 애니메이션을 재생,(Locomotion->Reload->Locomotion)
+ * - WeaponExchange(UpperBody) : 상체만 재장전 애니메이션을 재생
+ * - Dodge(FullBody) : 구르기 애니메이션을 재생
+ * - Parkour(FullBody) : 파쿠르 애니메이션을 재생
+ * - Grapple(FullBody) : 그래플링 애니메이션을 재생
+ */
 UCLASS()
 class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
 {
 	GENERATED_BODY()
 
 public:
-	APlayerCharacter();
 
+	
+	APlayerCharacter();
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthAndShieldChanged, int, Health, int, Shield);
 	/** 체력이나 실드가 변경되었을 때 호출되는 이벤트 */
@@ -36,6 +54,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
 	bool bIsOnAttackAnimState; 
 protected:
+	FStateMachineContext StateMachineContext;
 	
 	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
@@ -62,11 +81,54 @@ protected:
 	/** 재장중인지 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Locomotion")
 	bool bIsReloading;
+	/** 전신 슬롯에서 몽타주 재생 여부 */
+	bool bIsFullBodyActive;
 	/** UpperBody Slot에서 몽타주 재생 여부 */
 	bool bIsUpperBodyActive;
 	/** 캐릭터 이동 입력 여부 */
 	bool bIsMoving;
 
+	/** 구르기 기준점이 되는 속도, Curve의 값에 곱해진다. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	float DodgeSpeed;
+	/** 구르기 속도를 조절하는 커브, DodgeSpeed에 곱해진다. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	FRuntimeFloatCurve DodgeCurve;
+	/** 구르기 상태를 갱신하는 타이머 핸들 */
+	FTimerHandle DodgeUpdateTimerHandle;
+	/** 구르기 속도 갱신 주기 */
+	float DodgeUpdateInterval;
+	/** 구르기 진행도를 추적하기 위한 구르기 시간 */
+	float DodgeElapsedTime;
+	/** 구르기 시작했을 때의 방향, 월드 좌표계*/
+	FVector DodgeDirection;
+	/** Forward 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeForwardMontage;
+	/** Backward 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeBackwardMontage;
+	/** Left 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeLeftMontage;
+	/** Right 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeRightMontage;
+	/** Forward Left 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeForwardLeftMontage;
+	/** Forward Right 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeForwardRightMontage;
+	/** Backward Left 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeBackwardLeftMontage;
+	/** Backward Right 방향으로 구르기 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
+	UAnimMontage* DodgeBackwardRightMontage;
+	/** 현재 진행 중인 구르기 몽타주 */
+	TWeakObjectPtr<UAnimMontage> CurrentDodgeMontage;
+	
 	/** 조준을 하지 않았을 때 카메라 암 길이 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
 	float NormalSpringArmLength;
@@ -155,6 +217,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
 
+	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
+	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
+	/** FullBody Slot에서 몽타주 진행 여부 설정 */
+	void SetFullBodyActive(bool bActive) { bIsFullBodyActive = bActive; }
 	/** 무기를 장착 */
 	void Equip(class AWeaponBase* Weapon);
 	/** 탄약 추가 */
@@ -188,6 +254,14 @@ protected:
 	/** 사격 가능 여부를 확인*/
 	bool CanFire() const;
 
+	/** 로컬 좌표계에서의 이동 방향을 이용해서 구르기 몽타주를 반환 */
+	UAnimMontage* GetDodgeMontage(const FVector& LocalDodgeDirection) const;
+	/** 구르기가 종료되었을 때 호출되는 함수, BlendOut이 사작될 때 호출된다. */
+	UFUNCTION()
+	void OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
+	/** 구르기 동안 속도를 갱신하는 함수, Curve 데이터를 이용해서 현재 시간의 속도를 반영한다. */
+	void OnDodgeUpdate();
+	
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();
 	/** 리로드 UI 업데이트 콜백 함수 */
