@@ -71,6 +71,8 @@ void AMineItem::Explode()
 			false);
 	}
 
+	UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
+
 	DestroyItem();
 
 }

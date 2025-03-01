@@ -1,5 +1,6 @@
 #include "MoveHorizontal.h"
 #include "AIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "TheFourthDescendant/Monster/Boss/Boss.h"
 
 UMoveHorizontal::UMoveHorizontal()
@@ -33,9 +34,10 @@ EBTNodeResult::Type UMoveHorizontal::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
 void UMoveHorizontal::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	// 보스가 BackMoving 상태가 끝났다면 성공 반환
+	// 보스가 Surrounding 상태가 끝났다면 성공 반환
 	if (Boss->MovementState != EBossMovementState::Surrounding)
 	{
+		OwnerComp.GetBlackboardComponent()->SetValueAsBool(FName("IsMoving"), false);
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		return;
 	}

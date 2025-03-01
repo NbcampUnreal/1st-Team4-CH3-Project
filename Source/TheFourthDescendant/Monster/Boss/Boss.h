@@ -27,6 +27,14 @@ enum class EBossMovementState : uint8
 	Idle UMETA(DisplayName = "Idle"),
 };
 
+UENUM(BlueprintType)
+enum class EBossGroggyType : uint8
+{
+	Default UMETA(DisplayName = "Default"),
+	Triggered UMETA(DisplayName = "Triggered"),
+	Actioned UMETA(DisplayName = "Actioned"),
+};
+
 UCLASS()
 class THEFOURTHDESCENDANT_API ABoss : public ACharacterBase
 {
@@ -65,10 +73,19 @@ public:
 	/** 일반 공격 패턴 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	bool bIsAttacking;
+	/** 그로기 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	bool bIsGroggy;
 
 	
 	
 protected:
+	/** Javelin 발사 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pattern|Sound")
+	class USoundCue* JavelinSound;
+	/** Javelin 발사 사운드*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pattern|Sound")
+	class USoundBase* FlameSound;
 	/** 발사할 유도 미사일 클래스 정보 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Projectile")
 	TSubclassOf<AHomingProjectile> HomingClass;
@@ -188,6 +205,10 @@ private:
 	int32 RJavelinRepeatCount;
 	/** Spawn 시킬 Mine의 위치 Index */
 	int32 MineLocationIndex;
+	/** 첫 번째 그로기 타입 */
+	EBossGroggyType FirstGroggyType;
+	/** 두 번째 그로기 타입 */
+	EBossGroggyType SecondGroggyType;
 
 public:
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
@@ -260,6 +281,10 @@ protected:
 private:
 	/** Blackboard의 이동 상태 관련 bool 변수 초기화 */
 	void InitBlackboardMovementFlag(const EBossMovementState State);
+
+	void IsFirstGroggyTriggered();
+	void IsSecondGroggyTriggered();
+	void IsCurrentHealthZero();
 	
 
 };
