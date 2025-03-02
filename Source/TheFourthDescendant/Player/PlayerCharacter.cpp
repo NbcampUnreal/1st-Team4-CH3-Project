@@ -234,8 +234,6 @@ void APlayerCharacter::SetInvincibility(bool bEnable)
 	{
 		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 		GetCapsuleComponent()->RecreatePhysicsState();
-		UE_LOG(LogTemp, Warning, TEXT("Set Invincibility"));
-		
 	}
 	else
 	{
