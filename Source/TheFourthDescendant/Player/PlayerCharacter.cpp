@@ -32,6 +32,11 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	bInvincible = false;
+
+	ShieldRechargeRate = 10.0f;
+	ShieldRechargeInterval = 1.0f;
+	ShieldRechargeDelay = 5.0f;
+	CurrentShieldFloatRemain = 0.0f;
 	
 	// StateMachineContext.Character = this;
 	// StateMachineContext.Weapon = nullptr;
@@ -218,7 +223,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 	UpdateIsAiming();
 	UpdateYawControl();
-	UpdateCameraArmLength(DeltaSeconds);	
+	UpdateCameraArmLength(DeltaSeconds);
 }
 
 void APlayerCharacter::SetInvincibility(bool bEnable)
@@ -277,6 +282,11 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
 
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -291,6 +301,36 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 	}
 
 	// 사망 처리
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+}
+
+void APlayerCharacter::StartRechargeShield()
+{
+	CurrentShieldFloatRemain = 0.0f;
+	GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::RechargeShield, ShieldRechargeInterval, true);
+}
+
+void APlayerCharacter::RechargeShield()
+{
+	CurrentShieldFloatRemain += ShieldRechargeRate * ShieldRechargeInterval;
+	const int32 ShieldRechargeAmount = FMath::FloorToInt(CurrentShieldFloatRemain);
+	if (ShieldRechargeAmount <= 0)
+	{
+		return;
+	}
+
+	Status.Shield = FMath::Clamp(Status.Shield + ShieldRechargeAmount, 0, Status.MaxShield);
+	CurrentShieldFloatRemain -= ShieldRechargeAmount;
+	if (Status.Shield >= Status.MaxShield)
+    {
+        GetWorldTimerManager().ClearTimer(ShieldRechargeTimerHandle);
+    }
+	
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
@@ -386,8 +426,13 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	class AController* EventInstigator, AActor* DamageCauser)
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
 	OnTakeDamage.Broadcast(FDamageInfo(Status));
+	
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+	
 	if (Status.Health <= 0)
 	{
 		// 사망 처리

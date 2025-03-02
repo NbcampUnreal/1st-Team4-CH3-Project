@@ -47,7 +47,9 @@ struct FDurableChangeInfo
 
 	FDurableChangeInfo()
 		: MaxHealth(0.f), Health(0.f), MaxShield(0.f), Shield(0.f) {}
-	FDurableChangeInfo(const FStatus& Status)
+
+	// Broadcast(Status) 형식으로 암시적 캐스팅으로 넘어가는데 명확한 표현을 위해 암시적 캐스팅을 제거한다.
+	explicit FDurableChangeInfo(const FStatus& Status)
 		: MaxHealth(Status.MaxHealth), Health(Status.Health), MaxShield(Status.MaxShield), Shield(Status.Shield) {}
 	
 	UPROPERTY(BlueprintReadOnly)
@@ -105,6 +107,20 @@ protected:
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
 	bool bInvincible;
+
+	/** 1초 동안 회복되는 실드의 양 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeRate;
+	/** 실드가 회복될 때까지 기다려야 하는 시간 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeInterval;
+	/** 실드가 회복할 때 기다려야 하는 시간 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeDelay;
+	/** 현재 실드 회복 수치, 실드가 int 단위이기에 소수점을 따로 저장한다. */
+	float CurrentShieldFloatRemain;
+	/** 실드 회복 타이머, 피격이 될 경우, 실드 딜레이던, 실드 회복이던 취소가 되기 때문에 하나의 타이머를 이용해서 구현할 수 있다. */
+	FTimerHandle ShieldRechargeTimerHandle;
 	
 	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
@@ -270,6 +286,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
 
+	/** ShieldRechargeDelay 이후에 실드 재생을 시작하는 함수*/
+	void StartRechargeShield();
+	/** 실제 실드량을 회복시키는 함수 */
+	void RechargeShield();
+	
 	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
 	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
 	/** FullBody Slot에서 몽타주 진행 여부 설정 */
