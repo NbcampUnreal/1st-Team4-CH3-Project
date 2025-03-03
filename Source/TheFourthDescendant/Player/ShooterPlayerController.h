@@ -50,6 +50,15 @@ public:
 	/** IA_Reload를 반환 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	UInputAction* ReloadAction;
+	/** IA_Weapon1를 반환 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* EquipWeapon1Action;
+	/** IA_Weapon2를 반환 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* EquipWeapon2Action;
+	/** IA_Weapon3를 반환 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* EquipWeapon3Action;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;

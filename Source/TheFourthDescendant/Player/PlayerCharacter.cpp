@@ -6,15 +6,15 @@
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Tests/AutomationCommon.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
 const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
+const int APlayerCharacter::MaxWeaponSlotCount = 3;
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -32,8 +32,15 @@ APlayerCharacter::APlayerCharacter()
 
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
-	StateMachineContext.Character = this;
-	StateMachineContext.Weapon = nullptr;
+	bInvincible = false;
+
+	ShieldRechargeRate = 10.0f;
+	ShieldRechargeInterval = 1.0f;
+	ShieldRechargeDelay = 5.0f;
+	CurrentShieldFloatRemain = 0.0f;
+	
+	// StateMachineContext.Character = this;
+	// StateMachineContext.Weapon = nullptr;
 	
 	Status.WalkSpeed = 600.0f;
 	SprintSpeed = 1200.0f;
@@ -50,8 +57,9 @@ APlayerCharacter::APlayerCharacter()
 	bIsUpperBodyActive = false;
 	bIsOnAttackAnimState = false;
 
-	DodgeSpeed = 2000.0f;
+	StartWeaponClasses.SetNum(MaxWeaponSlotCount);
 	
+	DodgeSpeed = 2000.0f;
 	DodgeUpdateInterval = 0.01f;
 	DodgeElapsedTime = 0.0f;
 	DodgeDirection = FVector::ZeroVector;
@@ -62,6 +70,7 @@ APlayerCharacter::APlayerCharacter()
 	FootStepInterval = 0.3f;
 	MinFallSpeedForLandSound = 400.0f;
 
+	JumpMaxCount = 2;	
 	Tags.Add(TEXT("Player"));
 }
 
@@ -207,6 +216,36 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					&APlayerCharacter::Reload
 				);
 			}
+
+			if (PlayerController->EquipWeapon1Action)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->EquipWeapon1Action,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::EquipWeaponSlot1
+				);
+			}
+
+			if (PlayerController->EquipWeapon2Action)
+			{
+			    EnhancedInput->BindAction(
+			        PlayerController->EquipWeapon2Action,
+			        ETriggerEvent::Started,
+			        this,
+			        &APlayerCharacter::EquipWeaponSlot2
+			    );
+			}
+			
+			if (PlayerController->EquipWeapon3Action)
+			{
+			    EnhancedInput->BindAction(
+			        PlayerController->EquipWeapon3Action,
+			        ETriggerEvent::Started,
+			        this,
+			        &APlayerCharacter::EquipWeaponSlot3
+			    );
+			}
 		}
 	}
 }
@@ -217,7 +256,22 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 	UpdateIsAiming();
 	UpdateYawControl();
-	UpdateCameraArmLength(DeltaSeconds);	
+	UpdateCameraArmLength(DeltaSeconds);
+}
+
+void APlayerCharacter::SetInvincibility(bool bEnable)
+{
+	bInvincible = bEnable;
+
+	if (bInvincible)
+	{
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+		GetCapsuleComponent()->RecreatePhysicsState();
+	}
+	else
+	{
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
+	}
 }
 
 void APlayerCharacter::IncreaseHealth(const int Amount)
@@ -259,6 +313,11 @@ void APlayerCharacter::DecreaseShield(const int Amount)
 	Status.Shield = FMath::Clamp(Status.Shield, 0, Status.MaxShield);
 
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
 }
 
 void APlayerCharacter::ApplyDamage(const int Amount)
@@ -274,6 +333,109 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 
 	// 사망 처리
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+}
+
+void APlayerCharacter::StartRechargeShield()
+{
+	CurrentShieldFloatRemain = 0.0f;
+	GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::RechargeShield, ShieldRechargeInterval, true);
+}
+
+void APlayerCharacter::RechargeShield()
+{
+	CurrentShieldFloatRemain += ShieldRechargeRate * ShieldRechargeInterval;
+	const int32 ShieldRechargeAmount = FMath::FloorToInt(CurrentShieldFloatRemain);
+	if (ShieldRechargeAmount <= 0)
+	{
+		return;
+	}
+
+	Status.Shield = FMath::Clamp(Status.Shield + ShieldRechargeAmount, 0, Status.MaxShield);
+	CurrentShieldFloatRemain -= ShieldRechargeAmount;
+	if (Status.Shield >= Status.MaxShield)
+    {
+        GetWorldTimerManager().ClearTimer(ShieldRechargeTimerHandle);
+    }
+	
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+}
+
+void APlayerCharacter::InitWeaponInventory()
+{
+	StartWeaponClasses.RemoveAll([](const TSubclassOf<AWeaponBase>& WeaponClass) { return WeaponClass == nullptr; });
+	const int ValidWeaponCount = FMath::Min(StartWeaponClasses.Num(), MaxWeaponSlotCount);
+	for (int i = 0; i < ValidWeaponCount; i++)
+	{
+		FActorSpawnParameters Param;
+		Param.Owner = this;
+
+		if (AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClasses[i]))
+		{
+			NewWeapon->SetActorHiddenInGame(true);
+			WeaponSlots.Add(NewWeapon);
+		}
+	}
+}
+
+// 장착 모션 자체는 재장전 로직과 동일하다. 하나의 차이가 있다면 재장전은 모션이 취소되면 끊기지만 무기 교체는 이미 끝났다는 것이다.
+void APlayerCharacter::EquipWeaponByIndex(int I)
+{
+	if (!Controller || bIsFullBodyActive) return;
+	if (!WeaponSlots.IsValidIndex(I) || CurrentWeapon == WeaponSlots[I] ||  bIsExchangeWeapon) return;
+
+	bIsExchangeWeapon = true;
+	bIsUpperBodyActive = true;
+
+	StartExchangeAnim(I);
+}
+
+void APlayerCharacter::StartExchangeAnim(int I)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* UnEquipMontage = UnEquipMontages[CurrentWeapon->GetWeaponType()];
+	if (AnimInstance && UnEquipMontage)
+	{
+		AnimInstance->Montage_Play(UnEquipMontage);
+
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnUnEquipMontageEnded, I);
+		AnimInstance->Montage_SetBlendingOutDelegate(MontageEndedDelegate);
+	}
+}
+
+void APlayerCharacter::OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted, int32 WeaponSlotIndex)
+{
+	AWeaponBase* NextWeapon = WeaponSlots[WeaponSlotIndex];
+	Equip(NextWeapon);
+
+	if (bInterrupted)
+	{
+		bIsExchangeWeapon = false;
+		bIsUpperBodyActive = false;
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* EquipMontage = EquipMontages[NextWeapon->GetWeaponType()];
+	if (AnimInstance && EquipMontage)
+	{
+		AnimInstance->Montage_Play(EquipMontage);
+
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnEquipMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate);
+	}
+}
+
+void APlayerCharacter::OnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg)
+{
+	bIsExchangeWeapon = false;
+	bIsUpperBodyActive = false;
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -282,17 +444,20 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	// @To-Do : 기존 무기가 있으면 탈착
 	if (CurrentWeapon != nullptr)
 	{
-		
+		CurrentWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		CurrentWeapon->SetActorHiddenInGame(true);
+		CurrentWeapon = nullptr;
 	}
 
-	CurrentWeapon = Weapon;
-	StateMachineContext.Weapon = Weapon;
-	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
-	
-	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
-	Weapon->SetOwner(this);
-	bIsOnAttackAnimState = false;
-	OnEquipWeapon.Broadcast(Weapon);
+	if (Weapon != nullptr)
+	{
+		CurrentWeapon = Weapon;
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+		Weapon->SetOwner(this);
+		Weapon->SetActorHiddenInGame(false);
+		bIsOnAttackAnimState = false;
+		OnEquipWeapon.Broadcast(Weapon);
+	}
 }
 
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
@@ -347,18 +512,14 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StateMachineContext.AmmoInventory = &AmmoInventory;
-	
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
 	InitAmmoInventory();
-	if (StartWeaponClass)
+	InitWeaponInventory();
+	if (WeaponSlots.Num() > 0 && WeaponSlots[0])
 	{
-		if (AWeaponBase* StartWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass))
-		{
-			Equip(StartWeapon);
-		}
+		Equip(WeaponSlots[0]);
 	}
 
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
@@ -368,8 +529,13 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	class AController* EventInstigator, AActor* DamageCauser)
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
 	OnTakeDamage.Broadcast(FDamageInfo(Status));
+	
+	if (Status.Shield < Status.MaxShield)
+	{
+		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+	
 	if (Status.Health <= 0)
 	{
 		// 사망 처리
@@ -532,6 +698,7 @@ UAnimMontage* APlayerCharacter::GetDodgeMontage(const FVector& LocalDodgeDirecti
 void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 {
 	bIsFullBodyActive = false;
+	SetInvincibility(false);
 
 	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
 }
@@ -584,7 +751,7 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	bIsUpperBodyActive = false;
 	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
-	if (CurrentWeapon)
+	if (CurrentWeapon && !bInterrupted)
 	{
 		EAmmoType WeaponAmmoType = CurrentWeapon->GetAmmoType();
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
@@ -675,7 +842,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	if (bIsFullBodyActive) return;;
 	
 	bIsFullBodyActive = true;
-	// @To-DO : 콜리전 끄기(적 공격 회피)
+	SetInvincibility(true);
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -775,10 +942,29 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 		
 		FOnMontageEnded MontageEndDelegate;
 		// 몽타주가 실행된 다음은 인스턴스가 사라지기 때문에 호출할 때마다 바인딩해야 한다.
+		
 		MontageEndDelegate.BindUObject(this, &APlayerCharacter::OnReloadMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, ReloadMontage);
 
 		ReloadElapsedTime = 0.0f;
 		GetWorldTimerManager().SetTimer(ReloadUIUpdateTimerHandle, this, &APlayerCharacter::OnReloadUIUpdate, ReloadUIUpdateInterval, true);
 	}
+}
+
+void APlayerCharacter::EquipWeaponSlot1(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 1"));
+	EquipWeaponByIndex(0);
+}
+
+void APlayerCharacter::EquipWeaponSlot2(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 2"));
+	EquipWeaponByIndex(1);
+}
+
+void APlayerCharacter::EquipWeaponSlot3(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 3"));
+	EquipWeaponByIndex(2);
 }
