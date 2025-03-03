@@ -14,6 +14,7 @@
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
 const FName APlayerCharacter::RWeaponSocketName(TEXT("RHandWeaponSocket"));
+const int APlayerCharacter::MaxWeaponSlotCount = 3;
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -56,8 +57,9 @@ APlayerCharacter::APlayerCharacter()
 	bIsUpperBodyActive = false;
 	bIsOnAttackAnimState = false;
 
-	DodgeSpeed = 2000.0f;
+	StartWeaponClasses.SetNum(MaxWeaponSlotCount);
 	
+	DodgeSpeed = 2000.0f;
 	DodgeUpdateInterval = 0.01f;
 	DodgeElapsedTime = 0.0f;
 	DodgeDirection = FVector::ZeroVector;
@@ -362,8 +364,33 @@ void APlayerCharacter::RechargeShield()
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
+void APlayerCharacter::InitWeaponInventory()
+{
+	StartWeaponClasses.RemoveAll([](const TSubclassOf<AWeaponBase>& WeaponClass) { return WeaponClass == nullptr; });
+	const int ValidWeaponCount = FMath::Min(StartWeaponClasses.Num(), MaxWeaponSlotCount);
+	for (int i = 0; i < ValidWeaponCount; i++)
+	{
+		FActorSpawnParameters Param;
+		Param.Owner = this;
+
+		if (AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClasses[i]))
+		{
+			NewWeapon->SetActorHiddenInGame(true);
+			WeaponSlots.Add(NewWeapon);
+		}
+	}
+}
+
+// 장착 모션 자체는 재장전 로직과 동일하다. 하나의 차이가 있다면 재장전은 모션이 취소되면 끊기지만 무기 교체는 이미 끝났다는 것이다.
 void APlayerCharacter::EquipWeaponByIndex(int I)
 {
+	if (!Controller || bIsFullBodyActive) return;
+	if (!WeaponSlots.IsValidIndex(I) || bIsExchangeWeapon) return;
+
+	bIsExchangeWeapon = true;
+	bIsUpperBodyActive = true;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -372,17 +399,20 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	// @To-Do : 기존 무기가 있으면 탈착
 	if (CurrentWeapon != nullptr)
 	{
-		
+		CurrentWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		CurrentWeapon->SetActorHiddenInGame(true);
+		CurrentWeapon = nullptr;
 	}
 
-	CurrentWeapon = Weapon;
-	// StateMachineContext.Weapon = Weapon;
-	// @To-Do : 무기가 있으면 무기 교체, null일 경우 무기 해제
-	
-	Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
-	Weapon->SetOwner(this);
-	bIsOnAttackAnimState = false;
-	OnEquipWeapon.Broadcast(Weapon);
+	if (Weapon != nullptr)
+	{
+		CurrentWeapon = Weapon;
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+		Weapon->SetOwner(this);
+		Weapon->SetActorHiddenInGame(false);
+		bIsOnAttackAnimState = false;
+		OnEquipWeapon.Broadcast(Weapon);
+	}
 }
 
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
@@ -437,18 +467,14 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// StateMachineContext.AmmoInventory = &AmmoInventory;
-	
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
 	InitAmmoInventory();
-	if (StartWeaponClass)
+	InitWeaponInventory();
+	if (WeaponSlots.Num() > 0 && WeaponSlots[0])
 	{
-		if (AWeaponBase* StartWeapon = GetWorld()->SpawnActor<AWeaponBase>(StartWeaponClass))
-		{
-			Equip(StartWeapon);
-		}
+		Equip(WeaponSlots[0]);
 	}
 
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));

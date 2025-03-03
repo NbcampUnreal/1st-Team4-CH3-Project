@@ -204,14 +204,28 @@ protected:
 	/* 조준 보간 속도 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
 	float ZoomInterpSpeed;
-	
+
+	/** 최대 무기 슬롯 개수 */
+	static const int MaxWeaponSlotCount;
+	/** 소지 하고 있는 무기 */
+	UPROPERTY(VisibleInstanceOnly, Transient, Category = "Player|Weapon")
+	TArray<AWeaponBase*> WeaponSlots;
+	/** 시작 무기 리스트 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Weapon")
+	TArray<TSubclassOf<AWeaponBase>> StartWeaponClasses;
+	/** 무기 타입에 따른 장착 애니메이션 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
+	TMap<EWeaponType, UAnimMontage*> EquipMontages;
+	/** 무기 타입에 따른 탈착 애니메이션 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
+	TMap<EWeaponType, UAnimMontage*> UnEquipMontages;
+	/** 현재 무기 교체 애니메이션 재생 중인지 여부 */
+	bool bIsExchangeWeapon;
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
 	/** 왼손 무기 장착 소켓 이름 */
 	static const FName LWeaponSocketName;
 	/** 초기 소지 장비 클래스 */
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<AWeaponBase> StartWeaponClass;
 	/** 현재 장착된 무기 */
 	UPROPERTY(Transient, BlueprintReadOnly)
 	AWeaponBase* CurrentWeapon;
@@ -291,13 +305,15 @@ public:
 	/** 실제 실드량을 회복시키는 함수 */
 	void RechargeShield();
 
+	/** 무기 인벤토리를 초기 무기로 초기화한다.*/
+	void InitWeaponInventory();
 	/** I번째 무기 슬롯의 무기를 장착한다.*/
 	void EquipWeaponByIndex(int I);
 	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
 	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
 	/** FullBody Slot에서 몽타주 진행 여부 설정 */
 	void SetFullBodyActive(bool bActive) { bIsFullBodyActive = bActive; }
-	/** 무기를 장착 */
+	/** 무기를 장착한다. 애니메이션 출력과는 관계 없다. */
 	void Equip(class AWeaponBase* Weapon);
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)

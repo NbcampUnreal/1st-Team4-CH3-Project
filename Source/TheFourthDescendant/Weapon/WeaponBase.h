@@ -18,6 +18,15 @@ enum class EAmmoType : uint8
 };
 ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+	AR,
+	Lnc,
+	Count UMETA(Hidden),
+};
+ENUM_RANGE_BY_COUNT(EWeaponType, EWeaponType::Count);
+
 USTRUCT(BlueprintType)
 struct FShootResult
 {
@@ -105,12 +114,6 @@ protected:
 	/** 리로드 애니메이션 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Animation")
 	UAnimMontage* ReloadMontage;
-	/** 장착 애니메이션 몽타주 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Animation")
-	UAnimMontage* EquipMontage;
-	/** 해제 애니메이션 몽타주 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Animation")
-	UAnimMontage* UnEquipMontage;
 	/** 머즐 플래시 Vfx */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UNiagaraSystem* MuzzleFlashVfx;
