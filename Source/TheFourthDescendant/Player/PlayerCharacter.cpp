@@ -70,6 +70,7 @@ APlayerCharacter::APlayerCharacter()
 	FootStepInterval = 0.3f;
 	MinFallSpeedForLandSound = 400.0f;
 
+	JumpMaxCount = 2;	
 	Tags.Add(TEXT("Player"));
 }
 
@@ -403,7 +404,7 @@ void APlayerCharacter::StartExchangeAnim(int I)
 
 		FOnMontageEnded MontageEndedDelegate;
 		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnUnEquipMontageEnded, I);
-		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate);
+		AnimInstance->Montage_SetBlendingOutDelegate(MontageEndedDelegate);
 	}
 }
 
