@@ -290,7 +290,9 @@ public:
 	void StartRechargeShield();
 	/** 실제 실드량을 회복시키는 함수 */
 	void RechargeShield();
-	
+
+	/** I번째 무기 슬롯의 무기를 장착한다.*/
+	void EquipWeaponByIndex(int I);
 	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
 	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
 	/** FullBody Slot에서 몽타주 진행 여부 설정 */
@@ -391,4 +393,10 @@ protected:
 	/** IA_Reload(Started) 바인딩 함수 */
 	UFUNCTION()
 	void Reload(const FInputActionValue& Value);
+	UFUNCTION()
+	void EquipWeaponSlot1(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void EquipWeaponSlot2(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void EquipWeaponSlot3(const FInputActionValue& InputActionValue);
 };

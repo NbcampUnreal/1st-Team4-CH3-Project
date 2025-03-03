@@ -213,6 +213,36 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 					&APlayerCharacter::Reload
 				);
 			}
+
+			if (PlayerController->EquipWeapon1Action)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->EquipWeapon1Action,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::EquipWeaponSlot1
+				);
+			}
+
+			if (PlayerController->EquipWeapon2Action)
+			{
+			    EnhancedInput->BindAction(
+			        PlayerController->EquipWeapon2Action,
+			        ETriggerEvent::Started,
+			        this,
+			        &APlayerCharacter::EquipWeaponSlot2
+			    );
+			}
+			
+			if (PlayerController->EquipWeapon3Action)
+			{
+			    EnhancedInput->BindAction(
+			        PlayerController->EquipWeapon3Action,
+			        ETriggerEvent::Started,
+			        this,
+			        &APlayerCharacter::EquipWeaponSlot3
+			    );
+			}
 		}
 	}
 }
@@ -330,6 +360,10 @@ void APlayerCharacter::RechargeShield()
     }
 	
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+}
+
+void APlayerCharacter::EquipWeaponByIndex(int I)
+{
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -843,4 +877,22 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 		ReloadElapsedTime = 0.0f;
 		GetWorldTimerManager().SetTimer(ReloadUIUpdateTimerHandle, this, &APlayerCharacter::OnReloadUIUpdate, ReloadUIUpdateInterval, true);
 	}
+}
+
+void APlayerCharacter::EquipWeaponSlot1(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 1"));
+	EquipWeaponByIndex(0);
+}
+
+void APlayerCharacter::EquipWeaponSlot2(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 2"));
+	EquipWeaponByIndex(1);
+}
+
+void APlayerCharacter::EquipWeaponSlot3(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 3"));
+	EquipWeaponByIndex(2);
 }
