@@ -204,7 +204,7 @@ protected:
 	/* 조준 보간 속도 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
 	float ZoomInterpSpeed;
-
+	
 	/** 최대 무기 슬롯 개수 */
 	static const int MaxWeaponSlotCount;
 	/** 소지 하고 있는 무기 */
@@ -309,6 +309,12 @@ public:
 	void InitWeaponInventory();
 	/** I번째 무기 슬롯의 무기를 장착한다.*/
 	void EquipWeaponByIndex(int I);
+	/** I번째 무기 슬롯 교체 애니메이션 시작*/
+	void StartExchangeAnim(int I);
+	/** 무기 장착 해제 몽타주 종료*/
+	void OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg, int32 WeaponSlotIndex);
+	/** 무기 장착 몽타주 종료*/
+	void OnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg);
 	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
 	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
 	/** FullBody Slot에서 몽타주 진행 여부 설정 */

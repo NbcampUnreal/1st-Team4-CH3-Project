@@ -118,6 +118,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UNiagaraSystem* MuzzleFlashVfx;
 private:
+	/** 무기의 타입*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon")
+	EWeaponType WeaponType;
 	/** 사격이 발생하는 소켓 이름*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
 	FString FireSocketName;
@@ -126,6 +129,8 @@ private:
 	FString MuzzleFlashSocketName;
 	
 public:
+	/** 무기의 타입을 반환 */
+	EWeaponType GetWeaponType() const { return WeaponType; }
 	/** 무기가 사용하는 타입을 반환 */
 	EAmmoType GetAmmoType() const { return AmmoType; }
 	/** 현재 탄약 수를 반환 */

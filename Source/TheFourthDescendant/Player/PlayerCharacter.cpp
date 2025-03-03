@@ -385,12 +385,56 @@ void APlayerCharacter::InitWeaponInventory()
 void APlayerCharacter::EquipWeaponByIndex(int I)
 {
 	if (!Controller || bIsFullBodyActive) return;
-	if (!WeaponSlots.IsValidIndex(I) || bIsExchangeWeapon) return;
+	if (!WeaponSlots.IsValidIndex(I) || CurrentWeapon == WeaponSlots[I] ||  bIsExchangeWeapon) return;
 
 	bIsExchangeWeapon = true;
 	bIsUpperBodyActive = true;
 
+	StartExchangeAnim(I);
+}
+
+void APlayerCharacter::StartExchangeAnim(int I)
+{
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* UnEquipMontage = UnEquipMontages[CurrentWeapon->GetWeaponType()];
+	if (AnimInstance && UnEquipMontage)
+	{
+		AnimInstance->Montage_Play(UnEquipMontage);
+
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnUnEquipMontageEnded, I);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate);
+	}
+}
+
+void APlayerCharacter::OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted, int32 WeaponSlotIndex)
+{
+	AWeaponBase* NextWeapon = WeaponSlots[WeaponSlotIndex];
+	Equip(NextWeapon);
+
+	if (bInterrupted)
+	{
+		bIsExchangeWeapon = false;
+		bIsUpperBodyActive = false;
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	UAnimMontage* EquipMontage = EquipMontages[NextWeapon->GetWeaponType()];
+	if (AnimInstance && EquipMontage)
+	{
+		AnimInstance->Montage_Play(EquipMontage);
+
+		FOnMontageEnded MontageEndedDelegate;
+		MontageEndedDelegate.BindUObject(this, &APlayerCharacter::OnEquipMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate);
+	}
+}
+
+void APlayerCharacter::OnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg)
+{
+	bIsExchangeWeapon = false;
+	bIsUpperBodyActive = false;
 }
 
 void APlayerCharacter::Equip(class AWeaponBase* Weapon)
@@ -897,6 +941,7 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 		
 		FOnMontageEnded MontageEndDelegate;
 		// 몽타주가 실행된 다음은 인스턴스가 사라지기 때문에 호출할 때마다 바인딩해야 한다.
+		
 		MontageEndDelegate.BindUObject(this, &APlayerCharacter::OnReloadMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(MontageEndDelegate, ReloadMontage);
 
