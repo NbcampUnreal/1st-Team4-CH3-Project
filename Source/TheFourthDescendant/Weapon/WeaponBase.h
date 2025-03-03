@@ -41,9 +41,11 @@ public:
 	AWeaponBase();
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAmmoChanged, int, CurrentAmmo);
+	/** 총알 개수가 변경 됬을 때 발생할 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnAmmoChanged OnAmmoChanged;
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShootTriggered, FShootResult, ShootResult);
+	/** 사격 발생 시에 발생할 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
 
@@ -53,10 +55,11 @@ protected:
 
 	/** 발사 소켓 이름을 반환 */
 	FString GetFireSocketName() const { return FireSocketName; }
+	/** 머즐 플래시가 발생할 소켓 이름을 반환*/
 	FString GetMuzzleSocketName() const { return MuzzleFlashSocketName; }
 
 	/** 사격 가능 여부 */
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Weapon|Fire")
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Weapon|Fire")
 	bool bCanFire;
 	
 	/** 무기가 사용하는 탄약 타입 */
@@ -102,12 +105,14 @@ protected:
 	/** 리로드 애니메이션 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UAnimMontage* ReloadMontage;
+	/** 머즐 플래시 Vfx */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UNiagaraSystem* MuzzleFlashVfx;
 private:
 	/** 사격이 발생하는 소켓 이름*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
 	FString FireSocketName;
+	/** 머즐 플래시가 생성되는 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon|Fire")
 	FString MuzzleFlashSocketName;
 	
@@ -127,6 +132,7 @@ public:
 	/** 재장전 애니메이션 몽타주 반환 */
 	UFUNCTION(BlueprintCallable)
 	UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
+	/** 총알이 가득 찼는지 반환 */
 	UFUNCTION(BlueprintCallable)
 	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
 
@@ -143,6 +149,10 @@ protected:
 
 	/** 반동 수치를 감쇄한다. */
 	void ApplyRecoil(float DeltaTime);
+	/** 카메라로부터 화면 중앙까지 TraceDist 만큼 레이 트레이스 했을 떄 위치를 추적
+	 * 만약에 충돌이 없으면 TraceDist만큼 떨어진 지점을 반환
+	 */
+	FVector CalculateTargetPoint(const APlayerController* PlayerController, float TraceDist) const;
 	
 	/** 무기 메쉬를 반환 */
 	UFUNCTION(BlueprintCallable)
