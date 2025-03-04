@@ -7,6 +7,7 @@
 #include "TheFourthDescendant/Abstracts/CharacterBase.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 #include "TheFourthDescendant/AI/EnemyController/EnemyController.h"
+#include "TheFourthDescendant/ItemSpawnRow.h"
 #include "Monster.generated.h"
 
 
@@ -40,6 +41,9 @@ protected:
 	/** 변수 값 조정을 위한 블랙보드 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Target")
 	UBlackboardComponent* Blackboard;
+	/** 아이템 확률 표 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ItemSpawn")
+	UDataTable* ItemDataTable;
 
 public:
 	/** 공격 */
@@ -48,6 +52,13 @@ public:
 	virtual void Move();
 	/** 사망 로직 처리 */
 	virtual void OnDeath();
+	/** 아이템 스폰 */
+	virtual void SpawnItem(TSubclassOf<AActor> ItemClass);
+	/** 아이템 랜덤 스폰 */
+	UFUNCTION(BlueprintCallable)
+	virtual void SpawnRandomItem(); 
+	/** 아이템 랜덤 스폰 결과 */
+	FItemSpawnRow* GetRandomItem() const;
 
 protected:
 	virtual void BeginPlay() override;
