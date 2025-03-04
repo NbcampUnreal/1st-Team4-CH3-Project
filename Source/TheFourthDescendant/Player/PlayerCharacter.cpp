@@ -33,6 +33,7 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	bInvincible = false;
+	bIsDeath = false;
 
 	ShieldRechargeRate = 10.0f;
 	ShieldRechargeInterval = 1.0f;
@@ -291,8 +292,12 @@ void APlayerCharacter::DecreaseHealth(const int Amount)
 	Status.Health -= Amount;
 	Status.Health = FMath::Clamp(Status.Health, 0, Status.MaxHealth);
 
-	// 사망 처리
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+	// 사망 처리
+	if (Status.Health <= 0)
+	{
+		Die();
+	}
 }
 
 void APlayerCharacter::IncreaseShield(const int Amount)
@@ -331,13 +336,55 @@ void APlayerCharacter::ApplyDamage(const int Amount)
 		Status.Shield = 0;
 	}
 
-	// 사망 처리
-	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
-
 	if (Status.Shield < Status.MaxShield)
 	{
 		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
 	}
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	// 사망 처리
+	if (Status.Health <= 0)
+	{
+		Die();
+	}
+}
+
+void APlayerCharacter::Die()
+{
+	if (bIsDeath) return;
+	
+	bIsDeath = true;
+	bIsFullBodyActive = true;
+	bIsAiming = false;
+	OnPlayerBecomeDeath.Broadcast();
+
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	
+	if (!AnimInstance) return;
+	AnimInstance->StopAllMontages(false);
+	
+	EWeaponType CurrentWeaponType = CurrentWeapon ? CurrentWeapon->GetWeaponType() : EWeaponType::None;
+	UAnimMontage** DeathMontage = DeathMontages.Find(CurrentWeaponType);
+	if (DeathMontage && *DeathMontage)
+	{
+		const float MontageLength = AnimInstance->Montage_Play(*DeathMontage);
+
+		// Auto Blend Out을 비활성화했을 때 BlendOut, End가 호출이 안 된다.
+		// 따라서 Timer를 이용해서 직접 종료를 처리하기로 했다.
+		GetWorldTimerManager().SetTimer(DeathMontageTimerHandle, this, &APlayerCharacter::OnDeathMontageEnded, MontageLength, false);
+	}
+	else
+	{
+		OnDeathMontageEnded();
+	}
+}
+
+void APlayerCharacter::OnDeathMontageEnded()
+{
+	// Death Montage 종류 후
+	OnPlayerCompleteDeath.Broadcast();
 }
 
 void APlayerCharacter::StartRechargeShield()
@@ -546,6 +593,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	if (Status.Health <= 0)
 	{
 		// 사망 처리
+		Die();
 	}
 	
 	return  Amount;
@@ -553,6 +601,12 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 
 void APlayerCharacter::UpdateIsAiming()
 {
+	if (bIsDeath)
+	{
+		bIsAiming = false;
+		return;
+	}
+	
 	if (CurrentWeapon)
 	{
 		bIsAiming = bIsManualAiming || bIsShooting;	
@@ -627,7 +681,7 @@ void APlayerCharacter::Landed(const FHitResult& Hit)
 bool APlayerCharacter::CanFire() const
 {
 	if (!CurrentWeapon || !bIsOnAttackAnimState) return false;
-	if (bIsUpperBodyActive || bIsFullBodyActive) return false;
+	if (bIsUpperBodyActive || bIsFullBodyActive || bIsDeath) return false;
 
 	// !!! Warning
 	// 원래라면 이 부분은 애니메이션 슬롯을 확인해서 작동해야 한다.
@@ -770,7 +824,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 	// 전체 몸이 사용 중이면 이동을 할 수 없다.
-	if (bIsFullBodyActive) return;
+	if (bIsFullBodyActive || bIsDeath) return;
 
 	const FVector2D MoveInput = Value.Get<FVector2D>();
 	const FRotator ControllerRotator = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f);
@@ -810,7 +864,7 @@ void APlayerCharacter::StopMove(const FInputActionValue& Value)
 
 void APlayerCharacter::TriggerJump(const FInputActionValue& Value)
 {
-	if (!Controller) return;
+	if (!Controller || bIsDeath) return;
 
 	if (Value.Get<bool>())
 	{
@@ -846,7 +900,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
 	// 점프 중에는 회피를 할 수 없다.
 	if (GetMovementComponent()->IsFalling()) return;
-	if (bIsFullBodyActive) return;;
+	if (bIsFullBodyActive || bIsDeath) return;;
 	
 	bIsFullBodyActive = true;
 	SetInvincibility(true);
@@ -960,18 +1014,18 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 
 void APlayerCharacter::EquipWeaponSlot1(const FInputActionValue& InputActionValue)
 {
-	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 1"));
+	if (!Controller || bIsDeath) return;
 	EquipWeaponByIndex(0);
 }
 
 void APlayerCharacter::EquipWeaponSlot2(const FInputActionValue& InputActionValue)
 {
-	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 2"));
+	if (!Controller || bIsDeath) return;
 	EquipWeaponByIndex(1);
 }
 
 void APlayerCharacter::EquipWeaponSlot3(const FInputActionValue& InputActionValue)
 {
-	UE_LOG(LogTemp, Display, TEXT("Equip Weapon Slot 3"));
+	if (!Controller || bIsDeath) return;
 	EquipWeaponByIndex(2);
 }
