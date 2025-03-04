@@ -460,6 +460,13 @@ void APlayerCharacter::Equip(class AWeaponBase* Weapon)
 	}
 }
 
+FRotator APlayerCharacter::GetBaseAimRotation() const
+{
+	return CurrentWeapon ?
+		CurrentWeapon->GetAimRotation(this) :
+		Super::GetBaseAimRotation();
+}
+
 void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 {
 	if (Amount <= 0) return;

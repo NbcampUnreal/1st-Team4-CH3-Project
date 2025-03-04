@@ -15,6 +15,38 @@ AProjectileWeapon::AProjectileWeapon()
 	ExplosionRadius = 100.0f;
 }
 
+FRotator AProjectileWeapon::GetAimRotation(const APawn* TargetPawn) const
+{
+	FShootResult ShootResult;
+	if (AController* PlayerController = TargetPawn->GetController())
+	{
+		const FVector StartLocation = GetWeaponMesh()->GetSocketLocation(FName(GetFireSocketName()));
+		const FVector TargetLocation = CalculateTargetPoint(PlayerController, AttackRange);
+		FVector LaunchVelocity;
+
+		UGameplayStatics::FSuggestProjectileVelocityParameters Params(
+			this,
+			StartLocation,
+			TargetLocation,
+			ProjectileSpeed
+		);
+		Params.bFavorHighArc = false;
+		Params.TraceOption = ESuggestProjVelocityTraceOption::DoNotTrace;
+		Params.bAcceptClosestOnNoSolutions = true;
+		
+		if (UGameplayStatics::SuggestProjectileVelocity(Params, LaunchVelocity))
+		{
+			return LaunchVelocity.Rotation();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Display, TEXT("Failed to suggest projectile velocity"));
+		}
+	}
+	
+	return Super::GetAimRotation(TargetPawn);
+}
+
 FShootResult AProjectileWeapon::PerformAttack()
 {
 	Super::PerformAttack();

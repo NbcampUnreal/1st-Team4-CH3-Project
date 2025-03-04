@@ -25,6 +25,7 @@ protected:
 public:
 	// Sets default values for this actor's properties
 	AProjectileWeapon();
+	virtual FRotator GetAimRotation(const APawn* TargetPawn) const override;
 
 protected:
 	virtual FShootResult PerformAttack() override;
