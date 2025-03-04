@@ -71,6 +71,7 @@ APlayerCharacter::APlayerCharacter()
 
 	FootStepInterval = 0.3f;
 	MinFallSpeedForLandSound = 400.0f;
+	bShouldHandGrab = true;
 
 	JumpMaxCount = 2;	
 	Tags.Add(TEXT("Player"));
@@ -453,6 +454,7 @@ void APlayerCharacter::EquipWeaponByIndex(int I)
 
 	bIsExchangeWeapon = true;
 	bIsUpperBodyActive = true;
+	bShouldHandGrab = false;
 
 	StartExchangeAnim(I);
 }
@@ -475,6 +477,7 @@ void APlayerCharacter::OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bIn
 {
 	AWeaponBase* NextWeapon = WeaponSlots[WeaponSlotIndex];
 	Equip(NextWeapon);
+	bShouldHandGrab = true;
 
 	if (bInterrupted)
 	{
@@ -832,6 +835,7 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 {
 	bIsReloading = false;
 	bIsUpperBodyActive = false;
+	bShouldHandGrab = true;
 	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
 	if (CurrentWeapon && !bInterrupted)
@@ -1015,6 +1019,7 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 
 	bIsReloading = true;
 	bIsUpperBodyActive = true;
+	bShouldHandGrab = false;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();

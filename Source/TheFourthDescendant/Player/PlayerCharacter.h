@@ -168,6 +168,8 @@ protected:
 	bool bIsUpperBodyActive;
 	/** 캐릭터 이동 입력 여부 */
 	bool bIsMoving;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bShouldHandGrab;
 
 	/** 구르기 기준점이 되는 속도, Curve의 값에 곱해진다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")

@@ -34,6 +34,8 @@ AWeaponBase::AWeaponBase()
 	
 	MaxAmmoInMagazine = 30;
 	CurrentAmmo = MaxAmmoInMagazine;
+
+	AttachRotator = FRotator::ZeroRotator;
 }
 
 void AWeaponBase::Tick(float DeltaSeconds)
