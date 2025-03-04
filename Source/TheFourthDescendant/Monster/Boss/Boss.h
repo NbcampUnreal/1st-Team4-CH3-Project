@@ -96,12 +96,16 @@ protected:
 	/** 버서커 상태 시 패턴 보정 배율 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pattern|Berserk")
 	int32 PatternAdjustmentValue;
-	/** 버서커 모드 전환 최소 HP 비율 */
+	/** 버서커 모드 전환 최소 HP */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pattern|Berserk")
-	int32 BerserkMinHealthPercentage;
+	int32 BerserkMinHealth;
 	/** 부위 파괴를 적용할 부위 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
 	TArray<FString> RegionNames;
+	/** 무릎 부위 파괴를 적용할 부위 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	TArray<FString> KneeItemNames;
+
 	/** 부위 파괴를 적용할 최소 데미지 횟수 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
 	int32 KneeitemDestroyCount;
@@ -344,6 +348,8 @@ private:
 	void RotationToTargetWithAllBones(float DeltaSeconds);
 	/** 보스 패턴 타이머 세팅 함수 */
 	void SetPatternTimer(int32 AdjustmentValue);
+
+	
 	
 
 };
