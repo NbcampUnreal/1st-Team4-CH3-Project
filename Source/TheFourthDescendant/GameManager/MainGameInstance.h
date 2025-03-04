@@ -44,7 +44,9 @@ private:
 
 public:
 	virtual void Init();
-	
+	/** 전역 변수 초기화 함수 */
+	UFUNCTION(BlueprintCallable)
+	void ResetValue();
 	/** 처치한 몬스터 수 증가 */
 	void AddKilledEnemyCount(const int32 Amount);
 	/** 발사한 총알 수 증가 */

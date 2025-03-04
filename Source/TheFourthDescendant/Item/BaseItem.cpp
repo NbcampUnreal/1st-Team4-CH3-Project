@@ -3,28 +3,35 @@
 
 ABaseItem::ABaseItem()
 {
-    PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = false;
     
-    // 루트 컴포넌트 생성 및 설정
-    Scene = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
-    SetRootComponent(Scene);
+	// 루트 컴포넌트 생성 및 설정
+	Scene = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
+	SetRootComponent(Scene);
 
-    // 충돌 컴포넌트 생성 및 설정
-    Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
-    // 겹침만 감지하는 프로파일 설정
-    Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
-    // 루트 컴포넌트로 설정
-    Collision->SetupAttachment(Scene);
+	// 충돌 컴포넌트 생성 및 설정
+	Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
+	Collision->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	Collision->SetupAttachment(Scene);
     
-    // 스태틱 메시 컴포넌트 생성 및 설정
-    StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-    StaticMesh->SetupAttachment(Collision);
-		// 메시가 불필요하게 충돌을 막지 않도록 하기 위해, 별도로 NoCollision 등으로 설정할 수 있음.
+	// 스태틱 메시 컴포넌트 생성 및 설정
+	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	StaticMesh->SetupAttachment(Collision);
 
-    // Overlap 이벤트 바인딩
-    Collision->OnComponentBeginOverlap.AddDynamic(this, &ABaseItem::OnItemOverlap);
-    Collision->OnComponentEndOverlap.AddDynamic(this, &ABaseItem::OnItemEndOverlap);
+	// 물리 시뮬레이션과 중력 활성화
+	StaticMesh->SetSimulatePhysics(true);
+	StaticMesh->SetEnableGravity(true);
+    
+	// StaticMesh가 실제로 충돌할 수 있도록 충돌 활성화 변경
+	StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	// 필요에 따라 Collision Response를 설정할 수도 있음.
+	// 예: StaticMesh->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+
+	// Overlap 이벤트 바인딩
+	Collision->OnComponentBeginOverlap.AddDynamic(this, &ABaseItem::OnItemOverlap);
+	Collision->OnComponentEndOverlap.AddDynamic(this, &ABaseItem::OnItemEndOverlap);
 }
+
 
 void ABaseItem::OnItemOverlap(
 			UPrimitiveComponent* OverlappedComp,

@@ -23,6 +23,18 @@ void UMainGameInstance::Init()
 	GetTimerManager().SetTimer(PlayTimeTimer, this, &UMainGameInstance::AddPlayTimeOneSecond, 1.0f, true);
 }
 
+void UMainGameInstance::ResetValue()
+{
+	KilledEnemyCount = 0;
+	PlayTime = 0;
+	ShootProjectileCount = 0;
+	ReceivedDamageByEnemy = 0;
+	DealtDamageToEnemy = 0;
+	HitProjectileCount = 0;
+	DeathCount = 0;
+	EvasionAttackCount = 0;
+}
+
 // 구현
 void UMainGameInstance::AddKilledEnemyCount(const int32 Amount)
 {

@@ -80,6 +80,15 @@ public:
 	
 	
 protected:
+	/** 부위 파괴를 적용할 부위 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	TArray<FString> RegionNames;
+	/** 부위 파괴를 적용할 최소 데미지 횟수 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	int32 RegionDestroyCount;
+	/** 부위 파괴 시 적용할 추가 데미지 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	int32 RegionDestroyDamage;
 	/** Javelin 발사 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pattern|Sound")
 	class USoundCue* JavelinSound;
@@ -209,8 +218,16 @@ private:
 	EBossGroggyType FirstGroggyType;
 	/** 두 번째 그로기 타입 */
 	EBossGroggyType SecondGroggyType;
+	/** 부위별 공격 횟수 누적 */
+	TMap<FName, int32> RegionAttackCount;
 
 public:
+	/** 부위별 데미지 적용 함수 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void ApplyPartsDamaged(FName PartsName);
+	/** 부위 파괴 함수 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void DestroyRegion(FName PartsName);
 	/** 잡몹 소환 패턴 시작을 알리는 함수 */
 	void SummonPatternStart();
 	/** 잡몹 소환 로직 함수 */
@@ -247,6 +264,8 @@ public:
 	void RJavelinShotStart();
 	/** 오른쪽 JavelinShot 로직 구현 */
 	void RJavelinShot();
+	/** 보스 부위 데미지 판별 */
+	void HandleDamageToPart(FName PartsName, float& Damage);
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
