@@ -1,5 +1,6 @@
 #include "BaseItem.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ABaseItem::ABaseItem()
 {
@@ -58,6 +59,13 @@ void ABaseItem::OnItemEndOverlap(
 
 void ABaseItem::ActivateItem(AActor* Activator)
 {
+	if (PickupSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			PickupSound,
+			GetActorLocation());
+	}
 }
 
 FName ABaseItem::GetItemType() const
