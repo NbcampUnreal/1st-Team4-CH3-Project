@@ -21,6 +21,7 @@ ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 UENUM(BlueprintType)
 enum class EWeaponType : uint8
 {
+	None,
 	AR,
 	Lnc,
 	Count UMETA(Hidden),
