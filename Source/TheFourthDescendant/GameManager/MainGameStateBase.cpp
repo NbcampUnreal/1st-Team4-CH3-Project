@@ -29,6 +29,10 @@ void AMainGameStateBase::BeginPlay()
 		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Normal Level !");
 		bIsBossLevel = false;
 		GetMonsterSpawner();
+		LevelEnded.AddLambda([this]()
+		{
+			OnNormalLevelEnded();
+		});
 	}
 }
 
@@ -49,15 +53,6 @@ void AMainGameStateBase::StartLevel()
 		WaveInterval,
 		false);
 	
-
-	// 델리게이트 등록 (예: 레벨 시작 시 특정 함수 호출)
-	if (LevelEnded.IsValidIndex(CurrentLevelIndex))
-	{
-		LevelEnded[CurrentLevelIndex].AddLambda([]()
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Level Ended !")));
-		});
-	}
 }
 
 
@@ -98,11 +93,7 @@ void AMainGameStateBase::SetNextLevelWaveIndex()
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Level Changed !")));
 		
-		// @To-do 레벨 델리게이트 함수
-		if (LevelEnded.IsValidIndex(CurrentLevelIndex))
-		{
-			LevelEnded[CurrentLevelIndex].Broadcast();
-		}
+		LevelEnded.Broadcast();
 		
 		++CurrentLevelIndex;
 		TempWaveIndex = 0;
@@ -118,9 +109,36 @@ void AMainGameStateBase::SetNextLevelWaveIndex()
 
 
 
-void AMainGameStateBase::EndLevel()
+void AMainGameStateBase::OnNormalLevelEnded()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Black, "Level end !");
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Change To Boss !")));
+	
+	GetWorldTimerManager().SetTimer(
+		LevelLoadTimer,
+		[this]()
+		{
+			UGameplayStatics::OpenLevel(GetWorld(), LevelNames[1]);
+		},
+		LevelInterval[0],
+		false
+		);
+}
+
+
+
+void AMainGameStateBase::OnBossLevelEnded()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Change To Title !")));
+	
+	GetWorldTimerManager().SetTimer(
+		LevelLoadTimer,
+		[this]()
+		{
+			UGameplayStatics::OpenLevel(GetWorld(), LevelNames[0]);
+		},
+		LevelInterval[1],
+		false
+		);
 }
 
 

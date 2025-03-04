@@ -44,8 +44,7 @@ EBTNodeResult::Type UBTTaskNode_JavelinShot::ExecuteTask(UBehaviorTreeComponent&
 	}
 
 	// 보스가 공격 중임을 알림
-	Boss->bIsAttacking = true;
-	Blackboard->SetValueAsBool(FName("IsAttacking"), Boss->bIsAttacking);
+	Blackboard->SetValueAsBool(FName("IsAttacking"), true);
 	
 	return EBTNodeResult::Succeeded;
 }

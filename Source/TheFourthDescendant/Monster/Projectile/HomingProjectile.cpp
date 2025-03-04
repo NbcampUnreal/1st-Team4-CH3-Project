@@ -47,10 +47,7 @@ void AHomingProjectile::SetHomingTarget()
 			TempLocation,
 			FRotator::ZeroRotator
 		);
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Homing !");
-
-
+	
 	// 임시 객체 위치 추적
 	ProjectileMovement->HomingTargetComponent = TempActor->GetRootComponent();
 }
