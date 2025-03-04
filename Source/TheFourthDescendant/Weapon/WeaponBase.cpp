@@ -26,6 +26,7 @@ AWeaponBase::AWeaponBase()
 	
 	WeaponAttackPower = 10;
 	FireInterval = 0.2f;
+	RattleInterval = 1.0f;
 	RecoilAmount = 2.0f;
 	RecoilRecoverySpeed = 5.0f;
 	MaxRecoilAmount = 15.0f;
@@ -48,6 +49,20 @@ void AWeaponBase::StartShoot()
 	{
 		Attack();
 	}
+	else if (bCanFire && CurrentAmmo <= 0)
+	{
+		PlayRattleSound();
+	}
+}
+
+void AWeaponBase::PlayRattleSound()
+{
+	if (RattleSfx)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, RattleSfx, GetActorLocation());
+		bCanFire = false;
+		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::OnCooldownFinished, RattleInterval, false);
+	}
 }
 
 void AWeaponBase::Reload(int& TotalAmmo)
@@ -67,6 +82,11 @@ void AWeaponBase::Reload(int& TotalAmmo)
 	}
 	OnAmmoChanged.Broadcast(CurrentAmmo);
 	UE_LOG(LogTemp, Warning, TEXT("Total Ammo: %d, Current Ammo: %d"), TotalAmmo, CurrentAmmo);
+}
+
+FRotator AWeaponBase::GetAimRotation(const APawn* TargetPawn) const
+{
+	return TargetPawn ? TargetPawn->APawn::GetBaseAimRotation() : FRotator::ZeroRotator;
 }
 
 // TO-DO : Attack 실행을 Animation Event에서 호출하도록 수정
@@ -98,14 +118,6 @@ void AWeaponBase::Attack()
 
 	if (MuzzleFlashVfx)
 	{
-		const FVector MuzzleLocation = WeaponMesh->GetSocketLocation(FName(GetMuzzleSocketName()));
-		const FRotator MuzzleRotation = WeaponMesh->GetSocketRotation(FName(GetMuzzleSocketName()));
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			GetWorld(),
-			MuzzleFlashVfx,
-			MuzzleLocation,
-			MuzzleRotation
-		);
 		UNiagaraFunctionLibrary::SpawnSystemAttached(
 			MuzzleFlashVfx,
 			WeaponMesh,
@@ -150,4 +162,30 @@ void AWeaponBase::ApplyRecoil(float DeltaTime)
 		// FInterpTo는 Distance에 비례해서 움직이기 때문에 처음 움직임이 빠르다. 이러한 움직임을 만들어내기에 적합하다.
 		CurrentRecoilOffset = FMath::FInterpTo(CurrentRecoilOffset, 0.0f, DeltaTime, RecoilRecoverySpeed);
 	}
+}
+
+FVector AWeaponBase::CalculateTargetPoint(const AController* PlayerController, const float TraceDist) const
+{
+	if (PlayerController == nullptr) {return FVector::ZeroVector;}
+	
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	const FVector CameraTraceStart = CameraLocation;
+	const FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * TraceDist;
+	FHitResult CameraHitResult;
+	FCollisionQueryParams CollisionQueryParams;
+	CollisionQueryParams.AddIgnoredActor(this);
+	CollisionQueryParams.AddIgnoredActor(GetOwner());
+
+	FVector TargetEnd = CameraTraceEnd;
+	if (GetWorld()->LineTraceSingleByChannel(CameraHitResult, CameraTraceStart, CameraTraceEnd, ECollisionChannel::ECC_Visibility, CollisionQueryParams))
+	{
+		// ImpactPoint까지로만 잡으면 부동 소수점 오차로 인해서 2차 라인 트레이싱에서 도달하지 못할 수 있다.
+		// 따라서 아주 작은 값 10을 진행 방향으로 더해서 2차 라인 트레이싱에서 다시 도달할 수 있게 보장한다.
+		TargetEnd = CameraHitResult.ImpactPoint + CameraRotation.Vector() * 10.f;
+	}
+
+	return TargetEnd;
 }

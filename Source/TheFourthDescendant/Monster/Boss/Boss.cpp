@@ -2,6 +2,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 #include "TheFourthDescendant/AI/EnemyController/BossController.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/GameManager/MainGameStateBase.h"
@@ -16,6 +17,8 @@
 #pragma region InitComponent
 ABoss::ABoss()
 {
+	FirstGroggyType = EBossGroggyType::Default;
+	SecondGroggyType = EBossGroggyType::Default;
 	bCanAttack = false;
 	bIsSpawned = false;
 	bIsDead = false;
@@ -116,19 +119,17 @@ void ABoss::BeginPlay()
 float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
                         class AController* EventInstigator, AActor* DamageCauser)
 {
-	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+	// 스폰 중이거나 사망했을 경우 return
+	if (!bIsSpawned || bIsDead) return 0;
+
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
 	
-	// @To-do 쉴드 50%, 0%, 체력 75% 때 그로기 패턴 추가
-	if (Status.Health <= 0)
-	{
-		OnDeath();
-
-		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
-		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
-		MainGameState->EndLevel();
-	}
+	IsCurrentHealthZero();
+	IsFirstGroggyTriggered();
+	IsSecondGroggyTriggered();
 
 	return ActualDamage;
 }
@@ -137,6 +138,9 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 
 void ABoss::OnDeath()
 {
+	// 사망했을 경우 return
+	if (bIsDead) return;
+	
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Boss OnDeath");
 
 	// 체력 0으로 초기화 및 콜리전 비활성화
@@ -158,9 +162,13 @@ void ABoss::OnDeath()
 void ABoss::MoveToTarget()
 {
 	if (Player == nullptr) return;
+	
+	FVector BossLocation = GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
 
-	// 플레이어 방향으로 전방이동
-	BossController->MoveToTargetActor(Player);
+	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
+
+	AddMovementInput(Direction, 1.0f);
 }
 
 void ABoss::MoveHorizontal(int32& Direction)
@@ -179,7 +187,7 @@ void ABoss::MoveHorizontal(int32& Direction)
 		DirectionVector = GetActorRightVector();
 	}
 
-	AddMovementInput(DirectionVector);
+	AddMovementInput(DirectionVector, 1.0f);
 }
 
 
@@ -228,11 +236,10 @@ void ABoss::SummonPatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 	
 	// Blackboard 값 초기화
 	bIsSummon = true;
-	Blackboard->SetValueAsBool(FName("IsSummon"), bIsSummon);
 }
 
 void ABoss::SummonMinions()
@@ -251,7 +258,7 @@ void ABoss::FlamePatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 
 	// 소켓 배열 초기화
 	RocketSocketTransforms.Empty();
@@ -269,7 +276,6 @@ void ABoss::FlamePatternStart()
 	
 	// Blackboard 값 초기화
 	bIsFlame = true;
-	Blackboard->SetValueAsBool(FName("IsFlame"), bIsFlame);
 }
 
 void ABoss::SetFlameExplosionTimer()
@@ -305,6 +311,9 @@ void ABoss::FlameExplosion()
 		SpawnedRocket->FireMissileIntoTheSky(LaunchDirection);
 	}
 
+	// 미사일 발사 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, FlameSound, SpawnLocation, SpawnRotation);
+
 	// 스폰할 지뢰 좌표 할당
 	FVector MineSpawnLocation = ExplosionLocations[MineLocationIndex]->GetActorLocation();
 
@@ -333,11 +342,10 @@ void ABoss::BusterPatternStart()
 {
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 	
 	// Blackboard 값 초기화
 	bIsBuster = true;
-	Blackboard->SetValueAsBool(FName("IsBuster"), bIsBuster);
 
 	// Buster Timer 초기화
 	GetWorldTimerManager().ClearTimer(BusterPatternTimer);
@@ -399,25 +407,32 @@ void ABoss::LJavelinShotStart()
 
 void ABoss::LJavelinShot()
 {
+	// 왼쪽 어깨 미사일 Socket 반환
 	FString SocketName = FString::Printf(TEXT("MissileSocket_L%d"), LJavelinRepeatCount+1);
 	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
 
-	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
-	HomingClass,
-	SocketTransform.GetLocation(),
-	FRotator::ZeroRotator);
+	// Homing Projectile 생성
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(HomingClass,SocketTransform.GetLocation(),FRotator::ZeroRotator);
 
+	// 방향벡터 설정
 	FVector LaunchDirection = FVector(0, -1, 1); 
 
+	// 발사
 	HomingProjectile->Fire(LaunchDirection);
-
+	
+	// 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, JavelinSound, GetActorLocation());
+	
+	// 발사한 탄환 수 1개 증가
 	++LJavelinRepeatCount;
 
+	// 모두 발사한 경우 변수 및 타이머 초기화
 	if (LJavelinRepeatCount >=  5)
 	{
 		LJavelinRepeatCount = 0;
 		GetWorldTimerManager().ClearTimer(LJavelinRepeatTimer);
+		SetNormalAttackTimer();
+		bIsLJavelinShot = false;
 	}
 	
 }
@@ -434,25 +449,32 @@ void ABoss::RJavelinShotStart()
 
 void ABoss::RJavelinShot()
 {
+	// 오른쪽 어깨 미사일 Socket 위치 반환
 	FString SocketName = FString::Printf(TEXT("MissileSocket_R%d"), RJavelinRepeatCount+1);
 	FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Missile Init : !");
 
-	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(
-	HomingClass,
-	SocketTransform.GetLocation(),
-	FRotator::ZeroRotator);
+	// Homing Projectile 생성
+	AHomingProjectile* HomingProjectile = GetWorld()->SpawnActor<AHomingProjectile>(HomingClass, SocketTransform.GetLocation(),FRotator::ZeroRotator);
 
+	// 방향벡터 설정
 	FVector LaunchDirection = FVector(0, -1, 1); 
 
+	// 발사
 	HomingProjectile->Fire(LaunchDirection);
 
+	// 사운드 재생
+	UGameplayStatics::PlaySoundAtLocation(this, JavelinSound, GetActorLocation());
+
+	// 발사한 탄환 수 1개 증가
 	++RJavelinRepeatCount;
 
+	// 모두 발사한 경우 변수 및 타이머 초기화
 	if (RJavelinRepeatCount >=  5)
 	{
 		RJavelinRepeatCount = 0;
 		GetWorldTimerManager().ClearTimer(RJavelinRepeatTimer);
+		SetNormalAttackTimer();
+		bIsRJavelinShot = false;
 	}
 }
 
@@ -551,6 +573,63 @@ void ABoss::SetNormalAttackTimer()
 		);
 }
 
+
+void ABoss::IsFirstGroggyTriggered()
+{
+	// 첫 번째 그로기가 출력된 경우 return
+	if (FirstGroggyType == EBossGroggyType::Actioned) return;
+	
+	// 첫 번째 그로기가 트리거 됐고, 보스가 그로기가 가능한 상태인 경우
+	if (FirstGroggyType == EBossGroggyType::Triggered && bIsAttacking)
+	{
+		bIsGroggy = true;
+		FirstGroggyType = EBossGroggyType::Actioned;
+	}
+
+	// 현재 쉴드량이 최대 쉴드량의 절반 이하인지 확인
+	if (Status.Shield <= Status.MaxShield / 2)
+	{
+		if (FirstGroggyType == EBossGroggyType::Default)
+		{
+			FirstGroggyType = EBossGroggyType::Triggered;
+		}
+	}
+}
+
+void ABoss::IsSecondGroggyTriggered()
+{
+	// 첫 번째 그로기가 출력된 적이 없거나, 두 번째 그로기가 출력된 적이 있는 경우 return
+	if (FirstGroggyType != EBossGroggyType::Actioned ||
+		SecondGroggyType == EBossGroggyType::Actioned) return;
+	
+	// 두 번째 그로기가 트리거 됐고, 보스가 그로기가 가능한 상태인 경우
+	if (SecondGroggyType == EBossGroggyType::Triggered && bIsAttacking)
+	{
+		bIsGroggy = true;
+		SecondGroggyType = EBossGroggyType::Actioned;
+	}
+
+	// 현재 쉴드량이 0 이하인지 확인
+	if (Status.Shield <= 0)
+	{
+		if (SecondGroggyType == EBossGroggyType::Default)
+		{
+			SecondGroggyType = EBossGroggyType::Triggered;
+		}
+	}
+}
+
+void ABoss::IsCurrentHealthZero()
+{
+	if (Status.Health <= 0)
+	{
+		OnDeath();
+		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
+		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
+		MainGameState->EndLevel();
+	}
+}
+
 #pragma endregion
 
 #pragma region InitMovementState Functions
@@ -561,7 +640,7 @@ void ABoss::InitMovementStateToIdle()
 
 	// AI 작동 정지
 	if (BossController == nullptr) return;
-	BossController->StopMovement();
+	//BossController->StopMovement();
 
 	// Idle Timer 초기화
 	GetWorldTimerManager().SetTimer(
@@ -630,24 +709,19 @@ void ABoss::InitBlackboardMovementFlag(const EBossMovementState State)
 }
 
 
-
 void ABoss::SetMoveState()
 {
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
 	IsInBusterBound(Distance);
-	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %f"), Distance));
-	
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %s"), *UEnum::GetValueAsString(MovementState)));
+	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Velocity %f"), GetCharacterMovement()->Velocity.Length()));
 	switch (MovementState)
 	{
 		// (1) 플레이어에게 전진하는 상태
 	case EBossMovementState::Approaching:
 		if (Distance < ApproachAcceptance)
 		{
-			// AI 작동 정지
-			if (BossController == nullptr) return;
-			BossController->StopMovement();
-			
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
 			MovementState = EBossMovementState::Surrounding;
 		}
