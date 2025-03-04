@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/GameManager/MainGameStateBase.h"
+#include "TheFourthDescendant/Item/HealingItem/HealingItem.h"
 
 AMonster::AMonster()
 {
@@ -78,6 +79,61 @@ void AMonster::Move()
 	
 }
 
+void AMonster::SpawnItem(TSubclassOf<AActor> ItemClass)
+{
+	if (!ItemClass) return;
+
+	GetWorld()->SpawnActor<AActor>(
+		ItemClass,
+		GetActorLocation(),
+		FRotator::ZeroRotator
+		);
+}
+
+void AMonster::SpawnRandomItem()
+{
+	if (FItemSpawnRow* SelectedRow = GetRandomItem())
+	{
+		if (UClass* ActualClass = SelectedRow->ItemClass.Get())
+		{
+			SpawnItem(ActualClass);
+		}
+	}
+}
+
+FItemSpawnRow* AMonster::GetRandomItem() const
+{
+	if (!ItemDataTable) return nullptr;
+
+	TArray<FItemSpawnRow*> AllRows;
+	static const FString ContextString(TEXT("ItemSpawnContext"));
+	ItemDataTable->GetAllRows(ContextString, AllRows);
+
+	if (AllRows.IsEmpty()) return nullptr;
+
+	float TotalChance = 0.0f;
+	for (const FItemSpawnRow* Row : AllRows)
+	{
+		if (Row)
+		{
+			TotalChance += Row->SpawnChance;
+		}
+	}
+
+	const float RandValue = FMath::FRandRange(0.0f, TotalChance);
+	float AccumulateChance = 0.0f;
+
+	for (FItemSpawnRow* Row : AllRows)
+	{
+		AccumulateChance += Row->SpawnChance;
+		if (RandValue <= AccumulateChance)
+		{
+			return Row;
+		}
+	}
+	return nullptr;
+}
+
 void AMonster::OnDeath()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
@@ -90,6 +146,8 @@ void AMonster::OnDeath()
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
 
+	SpawnRandomItem();
+	
 	// 죽인 적 수 반영
 	UGameInstance* GameInstance = GetGameInstance();
 	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
@@ -99,4 +157,6 @@ void AMonster::OnDeath()
 	AGameStateBase* StateBase = UGameplayStatics::GetGameState(GetWorld());
 	AMainGameStateBase* MainState = Cast<AMainGameStateBase>(StateBase);
 	MainState->OnEnemyKilled();
+
 }
+

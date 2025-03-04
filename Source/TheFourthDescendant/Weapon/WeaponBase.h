@@ -21,6 +21,7 @@ ENUM_RANGE_BY_COUNT(EAmmoType, EAmmoType::Count);
 UENUM(BlueprintType)
 enum class EWeaponType : uint8
 {
+	None,
 	AR,
 	Lnc,
 	Count UMETA(Hidden),
@@ -58,6 +59,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
 
+	FRotator AttachRotator;
+	
 protected:
 	/** ApplyRecoil을 호출해서 반동 감쇄*/
 	virtual void Tick(float DeltaSeconds) override;

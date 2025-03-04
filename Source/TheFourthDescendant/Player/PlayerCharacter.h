@@ -79,7 +79,6 @@ class THEFOURTHDESCENDANT_API APlayerCharacter : public ACharacterBase
 
 public:
 
-	
 	APlayerCharacter();
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTakeDamage, FDamageInfo, DamageInfo);
@@ -98,15 +97,31 @@ public:
 	/** 최대 탄약이 변경되었을 때 호출되는 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnTotalAmmoChanged OnTotalAmmoChanged;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerBecomeDeath);
+	/** 플레이어가 사망했을 때 호출되는 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnPlayerBecomeDeath OnPlayerBecomeDeath;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerCompleteDeath);
+	/** 사망 몽타주가 종료되었을 때 호출되는 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnPlayerCompleteDeath OnPlayerCompleteDeath;
 
 	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
 	bool bIsOnAttackAnimState; 
 protected:
 	// FStateMachineContext StateMachineContext;
+	FTimerHandle DeathMontageTimerHandle;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	/** 무적 상태 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
 	bool bInvincible;
+	/** 회피 무적 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
+	bool bDodgeInvincible;
+	/** 현재 사망 상태 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
+	bool bIsDeath;
 
 	/** 1초 동안 회복되는 실드의 양 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
@@ -153,6 +168,8 @@ protected:
 	bool bIsUpperBodyActive;
 	/** 캐릭터 이동 입력 여부 */
 	bool bIsMoving;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bShouldHandGrab;
 
 	/** 구르기 기준점이 되는 속도, Curve의 값에 곱해진다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
@@ -239,6 +256,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon")
 	TMap<EAmmoType, int32> AmmoInventory;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
+	TMap<EWeaponType, UAnimMontage*> DeathMontages;
+
 	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float FootStepInterval;
@@ -282,6 +302,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetInvincibility(bool bEnable);
+	/** 현재 무적 여부 확인 */
+	UFUNCTION(BlueprintCallable)
+	bool IsInvincible() const;
+	/** 무적 상태, 구르기 무적 상태를 기준으로 현재 무적 상태 갱신 */
+	void UpdateInvincible();
 	
 	/** Amount 만큼 체력을 증가 */
 	UFUNCTION(BlueprintCallable)
@@ -299,6 +324,8 @@ public:
 	/** Amount 만큼 데미지를 적용, 실드가 있을 경우 실드를 먼저 감소, 대미지가 아니고 바로 호출되는 것에 유의 */
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
+	void Die();
+	void OnDeathMontageEnded();
 
 	/** ShieldRechargeDelay 이후에 실드 재생을 시작하는 함수*/
 	void StartRechargeShield();
@@ -361,6 +388,8 @@ protected:
 	void OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
 	/** 구르기 동안 속도를 갱신하는 함수, Curve 데이터를 이용해서 현재 시간의 속도를 반영한다. */
 	void OnDodgeUpdate();
+	/** 구르기 무적 설정 */
+	void SetDodgeInvincible(bool bEnable);
 	
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();
