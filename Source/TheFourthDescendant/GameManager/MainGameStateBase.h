@@ -32,18 +32,26 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
 	int32 SpawnedEnemyCount;
 	/** 레벨 전환 시 호출될 델리게이트 함수 */
-	TArray<FLevelEnded> LevelEnded;
+	FLevelEnded LevelEnded;
 	/** 레벨에서 사용할 몬스터 스포너 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Level")
 	AMonsterSpawner* Spawner;
 	/** 웨이브 전환 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
 	float WaveInterval;
+	/** 레벨 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
+	TArray<FName> LevelNames;
+	/** 레벨 전환 간격 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
+	TArray<float> LevelInterval;
 	
 
 private:
 	/** 스포너에 사용할 타이머 핸들러 */
 	FTimerHandle SpawnerTimer;
+	/** 씬 전환에 사용될 타이머 핸들러 */
+	FTimerHandle LevelLoadTimer;
 	/** 보스 레벨 여부 */
 	bool bIsBossLevel;
 
@@ -66,7 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void OnEnemySpawned();
 	/** 현재 레벨이 끝나는 조건을 만족했을 때 호출 */
-	void EndLevel();
+	void OnNormalLevelEnded();
+	/** 보스 레벨이 끝나는 조건을 만족했을 때 호출 */
+	void OnBossLevelEnded();
 
 private:
 	/** 일반 몬스터 필드의 스포너를 가져오는 함수 */
