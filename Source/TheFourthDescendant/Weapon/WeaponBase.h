@@ -150,6 +150,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool IsMagazineFull() const { return CurrentAmmo == MaxAmmoInMagazine; }
 
+	virtual FRotator GetAimRotation(const APawn* TargetPawn) const;
+
 protected:
 	/** 무기의 공격 동작, 공격 실행, 사운드 재생, 효과음 재생 등 */
 	UFUNCTION()
@@ -166,7 +168,7 @@ protected:
 	/** 카메라로부터 화면 중앙까지 TraceDist 만큼 레이 트레이스 했을 떄 위치를 추적
 	 * 만약에 충돌이 없으면 TraceDist만큼 떨어진 지점을 반환
 	 */
-	FVector CalculateTargetPoint(const APlayerController* PlayerController, float TraceDist) const;
+	FVector CalculateTargetPoint(const AController* PlayerController, float TraceDist) const;
 	
 	/** 무기 메쉬를 반환 */
 	UFUNCTION(BlueprintCallable)

@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "ProjectileBase.generated.h"
+#include "PlayerProjectileBase.generated.h"
 
 class UNiagaraSystem;
 
 UCLASS()
-class THEFOURTHDESCENDANT_API AProjectileBase : public AActor
+class THEFOURTHDESCENDANT_API APlayerProjectileBase : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	AProjectileBase();
+	APlayerProjectileBase();
 
 	void LaunchProjectile(const FVector LaunchVelocity, float Damage, float ExplosionRadius);
 	

@@ -84,6 +84,11 @@ void AWeaponBase::Reload(int& TotalAmmo)
 	UE_LOG(LogTemp, Warning, TEXT("Total Ammo: %d, Current Ammo: %d"), TotalAmmo, CurrentAmmo);
 }
 
+FRotator AWeaponBase::GetAimRotation(const APawn* TargetPawn) const
+{
+	return TargetPawn ? TargetPawn->APawn::GetBaseAimRotation() : FRotator::ZeroRotator;
+}
+
 // TO-DO : Attack 실행을 Animation Event에서 호출하도록 수정
 void AWeaponBase::Attack()
 {
@@ -113,14 +118,6 @@ void AWeaponBase::Attack()
 
 	if (MuzzleFlashVfx)
 	{
-		const FVector MuzzleLocation = WeaponMesh->GetSocketLocation(FName(GetMuzzleSocketName()));
-		const FRotator MuzzleRotation = WeaponMesh->GetSocketRotation(FName(GetMuzzleSocketName()));
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			GetWorld(),
-			MuzzleFlashVfx,
-			MuzzleLocation,
-			MuzzleRotation
-		);
 		UNiagaraFunctionLibrary::SpawnSystemAttached(
 			MuzzleFlashVfx,
 			WeaponMesh,
@@ -167,7 +164,7 @@ void AWeaponBase::ApplyRecoil(float DeltaTime)
 	}
 }
 
-FVector AWeaponBase::CalculateTargetPoint(const APlayerController* PlayerController, const float TraceDist) const
+FVector AWeaponBase::CalculateTargetPoint(const AController* PlayerController, const float TraceDist) const
 {
 	if (PlayerController == nullptr) {return FVector::ZeroVector;}
 	

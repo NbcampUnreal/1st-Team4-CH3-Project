@@ -321,6 +321,8 @@ public:
 	void SetFullBodyActive(bool bActive) { bIsFullBodyActive = bActive; }
 	/** 무기를 장착한다. 애니메이션 출력과는 관계 없다. */
 	void Equip(class AWeaponBase* Weapon);
+	/** 현재 장착 무기에 따른 Aim Offset을 반환 */
+	virtual FRotator GetBaseAimRotation() const override;
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)
 	void AddAmmo(EAmmoType AmmoType, int Amount);
