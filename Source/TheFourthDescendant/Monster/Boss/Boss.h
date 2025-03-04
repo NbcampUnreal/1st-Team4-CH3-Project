@@ -35,6 +35,16 @@ enum class EBossGroggyType : uint8
 	Actioned UMETA(DisplayName = "Actioned"),
 };
 
+UENUM(BlueprintType)
+enum class EBossBerserkType : uint8
+{
+	Default UMETA(DisplayName = "Default"),
+	Triggered UMETA(DisplayName = "Triggered"),
+	Transition UMETA(DisplayName = "Transition"),
+	Activated UMETA(DisplayName = "Activated"),
+	Ended UMETA(DisplayName = "Ended"),
+};
+
 UCLASS()
 class THEFOURTHDESCENDANT_API ABoss : public ACharacterBase
 {
@@ -49,6 +59,9 @@ public:
 	/** 현재 적의 이동 상태 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	EBossMovementState MovementState;
+	/** 버서커 상태 여부 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	EBossBerserkType BerserkType;
 	/** 잡몹 소환 패턴 여부 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Locomotion")
 	bool bIsSummon;
@@ -80,9 +93,18 @@ public:
 	
 	
 protected:
+	/** 버서커 상태 시 패턴 보정 배율 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pattern|Berserk")
+	int32 PatternAdjustmentValue;
+	/** 버서커 모드 전환 최소 HP 비율 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pattern|Berserk")
+	int32 BerserkMinHealthPercentage;
 	/** 부위 파괴를 적용할 부위 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
 	TArray<FString> RegionNames;
+	/** 부위 파괴를 적용할 최소 데미지 횟수 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	int32 KneeitemDestroyCount;
 	/** 부위 파괴를 적용할 최소 데미지 횟수 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
 	int32 RegionDestroyCount;
@@ -220,8 +242,16 @@ private:
 	EBossGroggyType SecondGroggyType;
 	/** 부위별 공격 횟수 누적 */
 	TMap<FName, int32> RegionAttackCount;
+	/** KneeItem 파괴 횟수 추적 */
+	int32 KneeItemDestroyedCount;
 
 public:
+	/** 무릎의 주사기 움직임 */
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void BerserkEvent();
+	/** 버서커 상태로 전이가 가능한지 확인 */
+	UFUNCTION(BlueprintCallable)
+	void IsBerserkTransitionPossible();
 	/** 부위별 데미지 적용 함수 */
 	UFUNCTION(BlueprintImplementableEvent)
 	void ApplyPartsDamaged(FName PartsName);
@@ -266,6 +296,8 @@ public:
 	void RJavelinShot();
 	/** 보스 부위 데미지 판별 */
 	void HandleDamageToPart(FName PartsName, float& Damage);
+	/** 보스 부위 데미지 판별 */
+	void HandleDamageToKneeItem(FName PartsName);
 	/** Buster 인식 거리인지 측정 */
 	void IsInBusterBound(float& Distance);
 	/** 전방 이동 */
@@ -300,10 +332,19 @@ protected:
 private:
 	/** Blackboard의 이동 상태 관련 bool 변수 초기화 */
 	void InitBlackboardMovementFlag(const EBossMovementState State);
-
+	/** 첫 번째 그로기 패턴이 발동됐는지 확인 */
 	void IsFirstGroggyTriggered();
+	/** 두 번째 그로기 패턴이 발동됐는지 확인 */
 	void IsSecondGroggyTriggered();
+	/** 체력이 0이하인지 확인 */
 	void IsCurrentHealthZero();
+	/** 체력이 75% 이하로 떨어졌는지 확인 */
+	void IsBerserkTriggered();
+	/** 회전 로직 함수 */
+	void RotationToTargetWithAllBones(float DeltaSeconds);
+	/** 보스 패턴 타이머 세팅 함수 */
+	void SetPatternTimer(int32 AdjustmentValue);
 	
 
 };
+
