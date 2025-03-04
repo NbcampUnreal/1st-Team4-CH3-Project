@@ -3,7 +3,6 @@
 
 #include "RangeWeapon.h"
 
-#include "CollisionDebugDrawingPublic.h"
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Monster/Monster.h"
 
@@ -35,7 +34,8 @@ FShootResult ARangeWeapon::PerformAttack()
 			if (AActor* HitActor = HitResult.GetActor();
 				HitActor && HitActor->IsA(ACharacterBase::StaticClass()))
 			{
-				UGameplayStatics::ApplyDamage(HitActor, WeaponAttackPower, PlayerController, this, UDamageType::StaticClass());
+				FVector ShotDirection = (TargetEnd - MuzzleLocation).GetSafeNormal();
+				UGameplayStatics::ApplyPointDamage(HitActor, WeaponAttackPower, ShotDirection, HitResult, PlayerController, this, UDamageType::StaticClass());
 				ShootResult.bShouldHitMarkerOn = true;
 			}
 		}
