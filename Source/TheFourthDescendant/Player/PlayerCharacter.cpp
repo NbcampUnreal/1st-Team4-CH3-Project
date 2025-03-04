@@ -33,6 +33,7 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	bInvincible = false;
+	bDodgeInvincible = false;
 	bIsDeath = false;
 
 	ShieldRechargeRate = 10.0f;
@@ -262,9 +263,24 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 void APlayerCharacter::SetInvincibility(bool bEnable)
 {
+	const bool bWasInvincible = IsInvincible();
 	bInvincible = bEnable;
+	if (bWasInvincible == IsInvincible())
+	{
+		return;
+	}
 
-	if (bInvincible)
+	UpdateInvincible();
+}
+
+bool APlayerCharacter::IsInvincible() const
+{
+	return bInvincible || bDodgeInvincible;
+}
+
+void APlayerCharacter::UpdateInvincible()
+{
+	if (IsInvincible())
 	{
 		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 		GetCapsuleComponent()->RecreatePhysicsState();
@@ -759,7 +775,7 @@ UAnimMontage* APlayerCharacter::GetDodgeMontage(const FVector& LocalDodgeDirecti
 void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 {
 	bIsFullBodyActive = false;
-	SetInvincibility(false);
+	SetDodgeInvincible(false);
 
 	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
 }
@@ -777,6 +793,12 @@ void APlayerCharacter::OnDodgeUpdate()
 
 	DodgeVelocity.Z = CurrentVelocity.Z;
 	GetCharacterMovement()->Velocity = DodgeVelocity;
+}
+
+void APlayerCharacter::SetDodgeInvincible(bool bEnable)
+{
+	bDodgeInvincible = bEnable;
+	UpdateInvincible();
 }
 
 void APlayerCharacter::InitAmmoInventory()
@@ -903,7 +925,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	if (bIsFullBodyActive || bIsDeath) return;;
 	
 	bIsFullBodyActive = true;
-	SetInvincibility(true);
+	SetDodgeInvincible(true);
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
