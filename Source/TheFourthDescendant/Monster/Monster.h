@@ -48,6 +48,9 @@ public:
 	virtual void Move();
 	/** 사망 로직 처리 */
 	virtual void OnDeath();
+	/** 아이템 스폰 */
+	UFUNCTION(BlueprintCallable)
+	virtual void SpawnItem(TSubclassOf<AActor> ItemClass);
 
 protected:
 	virtual void BeginPlay() override;

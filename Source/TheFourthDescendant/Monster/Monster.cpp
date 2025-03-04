@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/GameManager/MainGameStateBase.h"
+#include "TheFourthDescendant/Item/HealingItem/HealingItem.h"
 
 AMonster::AMonster()
 {
@@ -78,6 +79,17 @@ void AMonster::Move()
 	
 }
 
+void AMonster::SpawnItem(TSubclassOf<AActor> ItemClass)
+{
+	if (!ItemClass) return;
+
+	GetWorld()->SpawnActor<AActor>(
+		ItemClass,
+		GetActorLocation(),
+		FRotator::ZeroRotator
+		);
+}
+
 void AMonster::OnDeath()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
@@ -99,4 +111,6 @@ void AMonster::OnDeath()
 	AGameStateBase* StateBase = UGameplayStatics::GetGameState(GetWorld());
 	AMainGameStateBase* MainState = Cast<AMainGameStateBase>(StateBase);
 	MainState->OnEnemyKilled();
+
 }
+
