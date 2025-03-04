@@ -73,7 +73,6 @@ APlayerCharacter::APlayerCharacter()
 	MinFallSpeedForLandSound = 400.0f;
 	bShouldHandGrab = true;
 
-	JumpMaxCount = 2;	
 	Tags.Add(TEXT("Player"));
 }
 
