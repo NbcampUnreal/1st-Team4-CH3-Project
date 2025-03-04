@@ -47,7 +47,9 @@ struct FDurableChangeInfo
 
 	FDurableChangeInfo()
 		: MaxHealth(0.f), Health(0.f), MaxShield(0.f), Shield(0.f) {}
-	FDurableChangeInfo(const FStatus& Status)
+
+	// Broadcast(Status) 형식으로 암시적 캐스팅으로 넘어가는데 명확한 표현을 위해 암시적 캐스팅을 제거한다.
+	explicit FDurableChangeInfo(const FStatus& Status)
 		: MaxHealth(Status.MaxHealth), Health(Status.Health), MaxShield(Status.MaxShield), Shield(Status.Shield) {}
 	
 	UPROPERTY(BlueprintReadOnly)
@@ -101,7 +103,24 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
 	bool bIsOnAttackAnimState; 
 protected:
-	FStateMachineContext StateMachineContext;
+	// FStateMachineContext StateMachineContext;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	bool bInvincible;
+
+	/** 1초 동안 회복되는 실드의 양 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeRate;
+	/** 실드가 회복될 때까지 기다려야 하는 시간 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeInterval;
+	/** 실드가 회복할 때 기다려야 하는 시간 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Status")
+	float ShieldRechargeDelay;
+	/** 현재 실드 회복 수치, 실드가 int 단위이기에 소수점을 따로 저장한다. */
+	float CurrentShieldFloatRemain;
+	/** 실드 회복 타이머, 피격이 될 경우, 실드 딜레이던, 실드 회복이던 취소가 되기 때문에 하나의 타이머를 이용해서 구현할 수 있다. */
+	FTimerHandle ShieldRechargeTimerHandle;
 	
 	/** 달리기 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Locomotion")
@@ -186,13 +205,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Attack")
 	float ZoomInterpSpeed;
 	
+	/** 최대 무기 슬롯 개수 */
+	static const int MaxWeaponSlotCount;
+	/** 소지 하고 있는 무기 */
+	UPROPERTY(VisibleInstanceOnly, Transient, Category = "Player|Weapon")
+	TArray<AWeaponBase*> WeaponSlots;
+	/** 시작 무기 리스트 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Weapon")
+	TArray<TSubclassOf<AWeaponBase>> StartWeaponClasses;
+	/** 무기 타입에 따른 장착 애니메이션 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
+	TMap<EWeaponType, UAnimMontage*> EquipMontages;
+	/** 무기 타입에 따른 탈착 애니메이션 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
+	TMap<EWeaponType, UAnimMontage*> UnEquipMontages;
+	/** 현재 무기 교체 애니메이션 재생 중인지 여부 */
+	bool bIsExchangeWeapon;
 	/** 오른손 무기 장착 소켓 이름 */
 	static const FName RWeaponSocketName;
 	/** 왼손 무기 장착 소켓 이름 */
 	static const FName LWeaponSocketName;
 	/** 초기 소지 장비 클래스 */
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<AWeaponBase> StartWeaponClass;
 	/** 현재 장착된 무기 */
 	UPROPERTY(Transient, BlueprintReadOnly)
 	AWeaponBase* CurrentWeapon;
@@ -247,6 +280,9 @@ public:
 	 */
 	virtual void Tick(float DeltaSeconds) override;
 
+	UFUNCTION(BlueprintCallable)
+	void SetInvincibility(bool bEnable);
+	
 	/** Amount 만큼 체력을 증가 */
 	UFUNCTION(BlueprintCallable)
 	void IncreaseHealth(const int Amount);
@@ -264,11 +300,26 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ApplyDamage(const int Amount);
 
+	/** ShieldRechargeDelay 이후에 실드 재생을 시작하는 함수*/
+	void StartRechargeShield();
+	/** 실제 실드량을 회복시키는 함수 */
+	void RechargeShield();
+
+	/** 무기 인벤토리를 초기 무기로 초기화한다.*/
+	void InitWeaponInventory();
+	/** I번째 무기 슬롯의 무기를 장착한다.*/
+	void EquipWeaponByIndex(int I);
+	/** I번째 무기 슬롯 교체 애니메이션 시작*/
+	void StartExchangeAnim(int I);
+	/** 무기 장착 해제 몽타주 종료*/
+	void OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg, int32 WeaponSlotIndex);
+	/** 무기 장착 몽타주 종료*/
+	void OnEquipMontageEnded(UAnimMontage* AnimMontage, bool bArg);
 	/** UpperBody Slot에서 몽타주 진행 여부 설정 */
 	void SetUpperBodyActive(bool bActive) { bIsUpperBodyActive = bActive; }
 	/** FullBody Slot에서 몽타주 진행 여부 설정 */
 	void SetFullBodyActive(bool bActive) { bIsFullBodyActive = bActive; }
-	/** 무기를 장착 */
+	/** 무기를 장착한다. 애니메이션 출력과는 관계 없다. */
 	void Equip(class AWeaponBase* Weapon);
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)
@@ -364,4 +415,10 @@ protected:
 	/** IA_Reload(Started) 바인딩 함수 */
 	UFUNCTION()
 	void Reload(const FInputActionValue& Value);
+	UFUNCTION()
+	void EquipWeaponSlot1(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void EquipWeaponSlot2(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void EquipWeaponSlot3(const FInputActionValue& InputActionValue);
 };
