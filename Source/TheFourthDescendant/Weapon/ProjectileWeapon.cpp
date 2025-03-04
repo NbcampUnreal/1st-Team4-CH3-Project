@@ -3,7 +3,7 @@
 
 #include "ProjectileWeapon.h"
 
-#include "ProjectileBase.h"
+#include "PlayerProjectileBase.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -78,7 +78,7 @@ FShootResult AProjectileWeapon::PerformAttack()
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.Owner = GetOwner();
 				SpawnParams.Instigator = GetInstigator();
-				if (AProjectileBase* Projectile = GetWorld()->SpawnActor<AProjectileBase>(ProjectileClass, StartLocation, FRotator::ZeroRotator, SpawnParams))
+				if (APlayerProjectileBase* Projectile = GetWorld()->SpawnActor<APlayerProjectileBase>(ProjectileClass, StartLocation, FRotator::ZeroRotator, SpawnParams))
 				{
 					Projectile->LaunchProjectile(LaunchVelocity, WeaponAttackPower, ExplosionRadius);
 				}

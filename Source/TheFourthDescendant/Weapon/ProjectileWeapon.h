@@ -15,7 +15,7 @@ class THEFOURTHDESCENDANT_API AProjectileWeapon : public AWeaponBase
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Weapon|Projectile")
-	TSubclassOf<class AProjectileBase> ProjectileClass;
+	TSubclassOf<class APlayerProjectileBase> ProjectileClass;
 	UPROPERTY(EditAnywhere, Category = "Weapon|Projectile")
 	float AttackRange;
 	UPROPERTY(EditAnywhere, Category="Weapon|Projectile")
