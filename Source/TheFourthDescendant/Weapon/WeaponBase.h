@@ -59,6 +59,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
 
+	FRotator AttachRotator;
+	
 protected:
 	/** ApplyRecoil을 호출해서 반동 감쇄*/
 	virtual void Tick(float DeltaSeconds) override;
