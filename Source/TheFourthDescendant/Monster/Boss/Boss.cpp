@@ -1,5 +1,8 @@
 #include "Boss.h"
+
+#include "AssetTypeCategories.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Engine/DamageEvents.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
@@ -119,10 +122,18 @@ void ABoss::BeginPlay()
 float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
                         class AController* EventInstigator, AActor* DamageCauser)
 {
-
 	// 스폰 중이거나 사망했을 경우 return
 	if (!bIsSpawned || bIsDead) return 0;
 
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamage = static_cast<const FPointDamageEvent*>(&DamageEvent);
+		
+		FHitResult HitResult = PointDamage->HitInfo;
+		
+		HandleDamageToPart(*HitResult.PhysicsObjectOwner->GetName(), DamageAmount);
+	}
+	
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
@@ -478,9 +489,49 @@ void ABoss::RJavelinShot()
 	}
 }
 
+
 #pragma endregion
 
 #pragma region Util
+void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("%s"), *PartsName.ToString()));
+	
+	if (!RegionNames.Contains(PartsName))
+	{
+		return;
+	}
+
+	Damage *= 1.5f;
+	
+	// 해당 부위의 머티리얼 색상 변경
+	ApplyPartsDamaged(PartsName);
+
+	// 해당 부위의 Attack Count 증가
+	if (RegionAttackCount.FindOrAdd(PartsName))
+	{
+		if (RegionAttackCount[PartsName] >= RegionDestroyCount)
+		{
+			Damage += RegionDestroyDamage;
+			DestroyRegion(PartsName);
+		}
+		else
+		{
+			++RegionAttackCount[PartsName];	
+		}
+	}
+	else
+	{
+		RegionAttackCount[PartsName] = 1;
+	}
+	
+
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("Damage Count: %d"), RegionAttackCount[PartsName]));
+
+}
+
+
+
 float ABoss::GetDistanceToPlayer()
 {
 	if (Player == nullptr) return 0;
@@ -550,7 +601,7 @@ void ABoss::IsInBusterBound(float& Distance)
 void ABoss::SetNormalAttackTimer()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Normal Start");
-
+	bIsAttacking = true;
 	// 중복 활성화 방지
 	GetWorldTimerManager().ClearTimer(NormalPatternTimer);
 	
@@ -626,7 +677,7 @@ void ABoss::IsCurrentHealthZero()
 		OnDeath();
 		AGameStateBase* GameState = UGameplayStatics::GetGameState(GetWorld());
 		AMainGameStateBase* MainGameState = Cast<AMainGameStateBase>(GameState);
-		MainGameState->EndLevel();
+		MainGameState->OnBossLevelEnded();
 	}
 }
 
