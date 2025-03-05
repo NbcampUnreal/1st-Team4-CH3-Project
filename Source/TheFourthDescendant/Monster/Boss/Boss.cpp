@@ -131,6 +131,13 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 	IsSecondGroggyTriggered();
 	IsBerserkTriggered();
 
+	// 게임 인스턴스 캐스팅
+	UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+
+	// 가한 피해량 증가
+	MainGameInstance->AddDealtDamageToEnemy(ActualDamage);
+
 	return ActualDamage;
 }
 
@@ -236,16 +243,6 @@ void ABoss::FlamePatternStart()
 	// 소켓 배열 초기화
 	RocketSocketTransforms.Empty();
 	
-	// 소켓 이름 리스트 생성
-	for (int i = 1; i <= 6; i++)
-	{
-		FString SocketName = FString::Printf(TEXT("RocketSocket%d"), i);
-		FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-
-		// 배열에 추가
-		RocketSocketTransforms.Add(SocketTransform);
-	}
-	
 	// Blackboard 값 초기화
 	bIsFlame = true;
 }
@@ -263,6 +260,16 @@ void ABoss::SetFlameExplosionTimer()
 void ABoss::FlameExplosion()
 {
 	if (MissileClass == nullptr) return;
+
+	// 소켓 이름 리스트 생성
+	for (int i = 1; i <= 6; i++)
+	{
+		FString SocketName = FString::Printf(TEXT("RocketSocket%d"), i);
+		FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
+
+		// 배열에 추가
+		RocketSocketTransforms.Add(SocketTransform);
+	}
 
 	// 미사일을 발사할 소켓의 위치를 랜덤으로 할당
 	int32 RandSocketIndex = FMath::RandRange(0,5);

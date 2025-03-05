@@ -60,6 +60,14 @@ float AMonster::TakeDamage(float DamageAmount, struct FDamageEvent const& Damage
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+
+	// 게임 인스턴스 캐스팅
+	UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+
+	// 가한 피해량 증가
+	MainGameInstance->AddDealtDamageToEnemy(ActualDamage);
+	
 	if (Status.Health <= 0)
 	{
 		OnDeath();

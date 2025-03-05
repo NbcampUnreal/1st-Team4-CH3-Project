@@ -55,22 +55,11 @@ void UMainGameInstance::AddReceivedDamageByEnemy(const int32 Amount)
 	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("ReceivedDamageByEnemy : %d"),ReceivedDamageByEnemy));
 }
 
+// 구현
 void UMainGameInstance::AddDealtDamageToEnemy(const int32 Amount)
 {
 	DealtDamageToEnemy += Amount;
 	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("DealtDamageToEnemy : %d"),DealtDamageToEnemy));
-}
-
-void UMainGameInstance::AddHitProjectileCount(const int32 Amount)
-{
-	HitProjectileCount += Amount;
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("HitProjectileCount : %d"),HitProjectileCount));
-}
-
-void UMainGameInstance::AddDeathCount(const int32 Amount)
-{
-	DeathCount += Amount;
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("DeathCount : %d"),DeathCount));
 }
 
 // 구현
