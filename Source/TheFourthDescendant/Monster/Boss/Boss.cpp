@@ -471,7 +471,6 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 	{
 		return;
 	}
-	
 	// 해당 부위의 머티리얼 색상 변경
 	ApplyPartsDamaged(PartsName);
 
@@ -486,7 +485,9 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 		}
 		else
 		{
-			++RegionAttackCount[PartsName];	
+			++RegionAttackCount[PartsName];
+			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Damaged: %s, Count : %d"), *PartsName.ToString(), RegionAttackCount[PartsName]));
+
 		}
 	}
 	else
