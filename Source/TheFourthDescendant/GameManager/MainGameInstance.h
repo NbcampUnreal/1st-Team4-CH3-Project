@@ -14,30 +14,30 @@ class THEFOURTHDESCENDANT_API UMainGameInstance : public UGameInstance
 public:
 	UMainGameInstance();
 
-private:
+public:
 	/** 처치한 총 몬스터 수 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 KilledEnemyCount;
 	/** 플레이 타임 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 PlayTime;
 	/** 플레이어가 발사한 총알 수 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 ShootProjectileCount;
 	/** 몬스터에게 받은 피해량 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 ReceivedDamageByEnemy;
 	/** 몬스터에게 입힌 피해량 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 DealtDamageToEnemy;
 	/** 플레이어가 적에게 적중한 총알 수 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 HitProjectileCount;
 	/** 사망한 횟수 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 DeathCount;
 	/** 플레이어가 적의 공격을 회피한 횟수 */
-	UPROPERTY(VisibleAnywhere, Category = "Result")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Result")
 	int32 EvasionAttackCount;
 	/** 플레이 타임 체크용 타이머 핸들 */
 	FTimerHandle PlayTimeTimer;
