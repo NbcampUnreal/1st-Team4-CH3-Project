@@ -108,7 +108,7 @@ public:
 
 	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
-	bool bIsOnAttackAnimState; 
+	bool bIsOnAttackAnimState;
 protected:
 	// FStateMachineContext StateMachineContext;
 	FTimerHandle DeathMontageTimerHandle;
@@ -372,6 +372,10 @@ public:
 	/** 실제 실드량을 회복시키는 함수 */
 	void RechargeShield();
 
+	/** 피격 시 재생할 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	UAnimMontage* HitMontage;
+	
 	/** 무기 인벤토리를 초기 무기로 초기화한다.*/
 	void InitWeaponInventory();
 	/** I번째 무기 슬롯의 무기를 장착한다.*/

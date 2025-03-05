@@ -629,6 +629,14 @@ void APlayerCharacter::PlayDamageSound()
 		bCanPlayDamageSound = false;
 		GetWorldTimerManager().SetTimer(DamageSoundTimerHandle, this, &APlayerCharacter::OnDamageSoundCoolDown, DamageSoundCoolDown, false);
 	}
+
+	if (HitMontage)
+	{
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Play(HitMontage);
+		}
+	}
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -1027,15 +1035,18 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 
 void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
 {
-	bIsCrouching = !bIsCrouching;
-	if (bIsCrouching)
-	{
-		Crouch();
-	}
-	else
-	{
-		UnCrouch();
-	}
+	// UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	// AnimInstance->Montage_Play(HitMontage);
+	
+	// bIsCrouching = !bIsCrouching;
+	// if (bIsCrouching)
+	// {
+	// 	Crouch();
+	// }
+	// else
+	// {
+	// 	UnCrouch();
+	// }
 }
 
 void APlayerCharacter::Interaction(const FInputActionValue& Value)
