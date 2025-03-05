@@ -60,6 +60,12 @@ void ARangedMonster::Tick(float DeltaTime)
 	SetActorRotation(InterpRotation);
 }
 
+void ARangedMonster::OnDeath()
+{
+	DestroyWidget();
+	Super::OnDeath();
+}
+
 
 
 
