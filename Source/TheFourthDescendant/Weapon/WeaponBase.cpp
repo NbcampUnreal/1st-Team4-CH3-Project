@@ -5,6 +5,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 
 FShootResult::FShootResult()
 {
@@ -35,7 +36,7 @@ AWeaponBase::AWeaponBase()
 	MaxAmmoInMagazine = 30;
 	CurrentAmmo = MaxAmmoInMagazine;
 
-	AttachRotator = FRotator::ZeroRotator;
+	MuzzleFlashAttachRotator = FRotator::ZeroRotator;
 }
 
 void AWeaponBase::Tick(float DeltaSeconds)
@@ -125,7 +126,7 @@ void AWeaponBase::Attack()
 			WeaponMesh,
 			FName(GetMuzzleSocketName()),
 			FVector::ZeroVector,
-			FRotator::ZeroRotator,
+			MuzzleFlashAttachRotator,
 			EAttachLocation::Type::SnapToTarget,
 			true
 		);
@@ -135,6 +136,12 @@ void AWeaponBase::Attack()
 	{
 		// @Improve : Recoil에 따라 카메라 쉐이크의 강도를 강하게 적용하도록 수정
 		GetWorld()->GetFirstPlayerController()->PlayerCameraManager->StartCameraShake(FireCameraShake);
+	}
+
+	// Game Instance
+	if (UMainGameInstance* GameInstance = Cast<UMainGameInstance>(GetGameInstance()))
+	{
+		GameInstance->AddShootProjectileCount(1);
 	}
 }
 

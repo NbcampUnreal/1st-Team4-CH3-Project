@@ -10,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -73,6 +74,17 @@ APlayerCharacter::APlayerCharacter()
 	MinFallSpeedForLandSound = 400.0f;
 	bShouldHandGrab = true;
 
+	DodgeSoundProbability = 0.5f;
+	ReloadSoundProbability = 0.8f;
+	ReloadWordMinAmmo = 15;
+
+	ShieldBrokenSoundCoolDown = 10.0f;
+	bCanPlayShieldBrokenSound = true;
+
+	DamageSoundProbability = 0.5f;
+	DamageSoundCoolDown = 2.0f;
+	bCanPlayDamageSound = true;
+	
 	Tags.Add(TEXT("Player"));
 }
 
@@ -259,6 +271,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 	UpdateIsAiming();
 	UpdateYawControl();
 	UpdateCameraArmLength(DeltaSeconds);
+	PrevShield = Status.Shield;
 }
 
 void APlayerCharacter::SetInvincibility(bool bEnable)
@@ -394,6 +407,11 @@ void APlayerCharacter::Die()
 	else
 	{
 		OnDeathMontageEnded();
+	}
+
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		MainGameInstance->AddDeathCount(1);
 	}
 }
 
@@ -594,18 +612,45 @@ void APlayerCharacter::BeginPlay()
 		Equip(WeaponSlots[0]);
 	}
 
+	PrevShield = Status.Shield;
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
+void APlayerCharacter::OnDamageSoundCoolDown()
+{
+	bCanPlayDamageSound = true;
+}
+
+void APlayerCharacter::PlayDamageSound()
+{
+	if (DamageSound && bCanPlayDamageSound && FMath::FRand() < DamageSoundProbability)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DamageSound, GetActorLocation());
+		bCanPlayDamageSound = false;
+		GetWorldTimerManager().SetTimer(DamageSoundTimerHandle, this, &APlayerCharacter::OnDamageSoundCoolDown, DamageSoundCoolDown, false);
+	}
+}
+
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-	class AController* EventInstigator, AActor* DamageCauser)
+                                   class AController* EventInstigator, AActor* DamageCauser)
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	OnTakeDamage.Broadcast(FDamageInfo(Status));
+
+	if (PrevShield > 0 && Status.Shield == 0)
+	{
+		PlayShieldBrokenSound();
+	}
+	PlayDamageSound();
 	
 	if (Status.Shield < Status.MaxShield)
 	{
 		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		MainGameInstance->AddHitProjectileCount(1);
 	}
 	
 	if (Status.Health <= 0)
@@ -613,7 +658,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 		// 사망 처리
 		Die();
 	}
-	
+
 	return  Amount;
 }
 
@@ -845,6 +890,25 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	}
 }
 
+void APlayerCharacter::OnShieldBrokenSoundCoolDown()
+{
+	bCanPlayShieldBrokenSound = true;
+}
+
+void APlayerCharacter::PlayShieldBrokenSound()
+{
+	if (bCanPlayShieldBrokenSound && ShieldBrokenWordSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ShieldBrokenWordSound, GetActorLocation());
+		bCanPlayShieldBrokenSound = false;
+		GetWorldTimerManager().SetTimer(ShieldBrokenSoundTimerHandle, this, &APlayerCharacter::OnShieldBrokenSoundCoolDown, ShieldBrokenSoundCoolDown, false);
+	}
+	else if (ShieldBrokenSound && FMath::FRand() < ShieldBrokenSoundProbability)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ShieldBrokenSound, GetActorLocation());
+    }
+}
+
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
@@ -929,6 +993,10 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	
 	bIsFullBodyActive = true;
 	SetDodgeInvincible(true);
+	if (DodgeSound && FMath::FRand() < DodgeSoundProbability)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DodgeSound, GetActorLocation());
+	}
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -1019,6 +1087,19 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 	bIsReloading = true;
 	bIsUpperBodyActive = true;
 	bShouldHandGrab = false;
+
+	int AmmoToReload = CurrentWeapon->GetMaxAmmoInMagazine() - CurrentWeapon->GetCurrentAmmo();
+	if (FMath::FRand() < ReloadSoundProbability)
+	{
+		if (ReloadWordSound && AmmoToReload >= ReloadWordMinAmmo)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ReloadWordSound, GetActorLocation());
+		}
+		else if (ReloadEffectSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ReloadEffectSound, GetActorLocation());
+		}
+	}
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();

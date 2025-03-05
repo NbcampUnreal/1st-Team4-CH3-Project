@@ -282,7 +282,47 @@ protected:
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* LandSound;
-	
+	/** 구르기 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* DodgeSound;
+	/** 구르기 사운드 재생 확률 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DodgeSoundProbability;
+	/** 장전할 때 소리, 단어가 아님 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ReloadEffectSound;
+	/** 장전할 떄 소리, 단어 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ReloadWordSound;
+	/** 장전했을 때 소리 재생 확률 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ReloadSoundProbability;
+	/** 장전 소리 재생했을 때 단어를 말하기 위한 최소 장전 총알 개수 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	int32 ReloadWordMinAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ShieldBrokenSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ShieldBrokenWordSound;
+	/** 실드 파괴 사운드 재생 확률 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ShieldBrokenSoundProbability;
+	/** 실드 파괴 시에 다시 실드 파괴 사운드를 재생할 때까지의 쿨타임*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ShieldBrokenSoundCoolDown;
+	/** 실드 파괴 단어 재생 여부 */
+	bool bCanPlayShieldBrokenSound;
+	/** bCanPlayShieldBrokenSound 재생을 업데이트할 타이머 핸들 */
+	FTimerHandle ShieldBrokenSoundTimerHandle;
+	float PrevShield;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* DamageSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DamageSoundProbability;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DamageSoundCoolDown;
+	FTimerHandle DamageSoundTimerHandle;
+	bool bCanPlayDamageSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -363,6 +403,8 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	void OnDamageSoundCoolDown();
+	void PlayDamageSound();
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 	/** 입력으로부터 IsAiming변수를 갱신, 공격 중이거나 조준 중이면 True가 된다. */
@@ -400,6 +442,9 @@ protected:
 	UFUNCTION()
 	void OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void OnShieldBrokenSoundCoolDown();
+	void PlayShieldBrokenSound();
+	
 	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
 	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.
 	 */
