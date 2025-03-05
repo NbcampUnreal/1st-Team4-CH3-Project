@@ -717,13 +717,14 @@ void APlayerCharacter::PlayDamageSound()
 		GetWorldTimerManager().SetTimer(DamageSoundTimerHandle, this, &APlayerCharacter::OnDamageSoundCoolDown, DamageSoundCoolDown, false);
 	}
 
-	if (HitMontage)
-	{
-		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-		{
-			AnimInstance->Montage_Play(HitMontage);
-		}
-	}
+	// 다른 몽타주를 취소시키고 있어서 현재 기능을 사용하지 않도록 한다.
+	// if (HitMontage)
+	// {
+	// 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	// 	{
+	// 		AnimInstance->Montage_Play(HitMontage);
+	// 	}
+	// }
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
