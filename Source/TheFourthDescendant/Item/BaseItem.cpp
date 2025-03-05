@@ -66,6 +66,15 @@ void ABaseItem::ActivateItem(AActor* Activator)
 			PickupSound,
 			GetActorLocation());
 	}
+
+	if(NiagaraActor)
+	{
+		FActorSpawnParameters SpawnParams;
+		GetWorld()->SpawnActor<AActor>(NiagaraActor, 
+				GetActorLocation(), 
+				FRotator::ZeroRotator, 
+				SpawnParams);
+	}
 }
 
 FName ABaseItem::GetItemType() const
