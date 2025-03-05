@@ -1,7 +1,6 @@
 #include "Boss.h"
-
-#include "AssetTypeCategories.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -20,6 +19,7 @@
 #pragma region InitComponent
 ABoss::ABoss()
 {
+	BerserkType = EBossBerserkType::Default;
 	FirstGroggyType = EBossGroggyType::Default;
 	SecondGroggyType = EBossGroggyType::Default;
 	bCanAttack = false;
@@ -31,6 +31,7 @@ ABoss::ABoss()
 	bIsLSlugShot = false;
 	bIsRSlugShot = false;
 	bIsBusterTimerTriggered = false;
+	KneeItemDestroyedCount = 0;
 	LJavelinRepeatCount = 0;
 	RJavelinRepeatCount = 0;
 	MineLocationIndex = 0;
@@ -59,6 +60,7 @@ ABoss::ABoss()
 	MovementState = EBossMovementState::Idle;
 	RocketSocketTransforms.Empty();
 	ExplosionLocations.Empty();
+	
 }
 
 
@@ -98,23 +100,8 @@ void ABoss::BeginPlay()
 	Status.Health = Status.MaxHealth;
 	Status.Shield = Status.MaxShield;
 
-	// 소환 타이머 가동
-	GetWorldTimerManager().SetTimer(
-		SummonPatternTimer,
-		this,
-		&ABoss::SummonPatternStart,
-		SummonPatternInterval,
-		true,
-		SummonPatternInterval);
-
-	// 플레임 타이머 가동
-	GetWorldTimerManager().SetTimer(
-		FlamePatternTimer,
-		this,
-		&ABoss::FlamePatternStart,
-		FlameExplosionPatternInterval,
-		true,
-		FlameExplosionPatternInterval);
+	// 보스 패턴 타이머 세팅
+	SetPatternTimer(1);
 }
 #pragma endregion
 
@@ -130,17 +117,19 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 		const FPointDamageEvent* PointDamage = static_cast<const FPointDamageEvent*>(&DamageEvent);
 		
 		FHitResult HitResult = PointDamage->HitInfo;
+		FName RegionName = *HitResult.PhysicsObjectOwner->GetName();
+		HandleDamageToPart(RegionName, DamageAmount);
+		HandleDamageToKneeItem(RegionName);	
 		
-		HandleDamageToPart(*HitResult.PhysicsObjectOwner->GetName(), DamageAmount);
 	}
 	
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Boss Get Damaged %f"), ActualDamage));
 	
 	IsCurrentHealthZero();
 	IsFirstGroggyTriggered();
 	IsSecondGroggyTriggered();
+	IsBerserkTriggered();
 
 	return ActualDamage;
 }
@@ -152,8 +141,6 @@ void ABoss::OnDeath()
 	// 사망했을 경우 return
 	if (bIsDead) return;
 	
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Boss OnDeath");
-
 	// 체력 0으로 초기화 및 콜리전 비활성화
 	Status.Health = 0;
 	SetActorEnableCollision(false);
@@ -215,26 +202,11 @@ void ABoss::MoveBack()
 void ABoss::RotationToTarget(float DeltaSeconds)
 {
 	if (!Player) return;
+	
+	// 버서커 상태로 전이가 가능한지 확인
+	IsBerserkTransitionPossible();
 
-	// 보스와 플레이어의 현재 위치를 가져옴
-	FVector BossLocation = GetActorLocation();
-	FVector PlayerLocation = Player->GetActorLocation();
-
-	// 정규화된 방향 벡터
-	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
-
-	// 목표 회전 각도 계산 (Yaw만 변경)
-	FRotator TargetRotation = Direction.Rotation();
-	TargetRotation.Pitch = 0;
-
-	// 현재 회전 값 가져오기
-	FRotator CurrentRotation = GetActorRotation();
-
-	// 일정 속도로 회전
-	FRotator NewRotation = FMath::RInterpConstantTo(CurrentRotation, TargetRotation, DeltaSeconds, RotationSpeed);
-
-	// 보스 회전 적용
-	SetActorRotation(NewRotation);
+	RotationToTargetWithAllBones(DeltaSeconds);
 	
 	// 거리에 따라 보스 이동 모드 설정
 	SetMoveState();
@@ -245,18 +217,12 @@ void ABoss::RotationToTarget(float DeltaSeconds)
 
 void ABoss::SummonPatternStart()
 {
-	// AI 작동 정지
-	if (BossController == nullptr) return;
-	//BossController->StopMovement();
-	
 	// Blackboard 값 초기화
 	bIsSummon = true;
 }
 
 void ABoss::SummonMinions()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, "Summoning Minions");
-
 	for (int i=0; i<SpawnEnemyCounter; ++i)
 	{
 		EnemySpawner->SpawnEnemy();	
@@ -267,10 +233,6 @@ void ABoss::SummonMinions()
 
 void ABoss::FlamePatternStart()
 {
-	// AI 작동 정지
-	if (BossController == nullptr) return;
-	//BossController->StopMovement();
-
 	// 소켓 배열 초기화
 	RocketSocketTransforms.Empty();
 	
@@ -279,7 +241,6 @@ void ABoss::FlamePatternStart()
 	{
 		FString SocketName = FString::Printf(TEXT("RocketSocket%d"), i);
 		FTransform SocketTransform = Mesh->GetSocketTransform(FName(*SocketName), ERelativeTransformSpace::RTS_World);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Socket Init : !");
 
 		// 배열에 추가
 		RocketSocketTransforms.Add(SocketTransform);
@@ -351,10 +312,6 @@ void ABoss::FlameExplosion()
 
 void ABoss::BusterPatternStart()
 {
-	// AI 작동 정지
-	if (BossController == nullptr) return;
-	//BossController->StopMovement();
-	
 	// Blackboard 값 초기화
 	bIsBuster = true;
 
@@ -384,7 +341,10 @@ void ABoss::LSlugShot()
 		FVector LeftMuzzleLocation = Mesh->GetSocketLocation(FName("L_MuzzleSocket"));
 		FVector LTargetDirection = (PlayerLocation - LeftMuzzleLocation).GetSafeNormal();
 		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, LeftMuzzleLocation, FRotator::ZeroRotator);
-		Projectile->Fire(LTargetDirection);
+		if (Projectile != nullptr)
+		{
+			Projectile->Fire(LTargetDirection);
+		}
 	}
 }
 
@@ -401,7 +361,10 @@ void ABoss::RSlugShot()
 		FVector RightMuzzleLocation = Mesh->GetSocketLocation(FName("R_MuzzleSocket"));
 		FVector RTargetDirection = (PlayerLocation - RightMuzzleLocation).GetSafeNormal();
 		ABombProjectile* Projectile = GetWorld()->SpawnActor<ABombProjectile>(BombClass, RightMuzzleLocation, FRotator::ZeroRotator);
-		Projectile->Fire(RTargetDirection);
+		if (Projectile != nullptr)
+		{
+			Projectile->Fire(RTargetDirection);
+		}
 	}
 }
 
@@ -495,14 +458,10 @@ void ABoss::RJavelinShot()
 #pragma region Util
 void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("%s"), *PartsName.ToString()));
-	
 	if (!RegionNames.Contains(PartsName))
 	{
 		return;
 	}
-
-	Damage *= 1.5f;
 	
 	// 해당 부위의 머티리얼 색상 변경
 	ApplyPartsDamaged(PartsName);
@@ -512,6 +471,7 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 	{
 		if (RegionAttackCount[PartsName] >= RegionDestroyCount)
 		{
+			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "Destroyed");
 			Damage += RegionDestroyDamage;
 			DestroyRegion(PartsName);
 		}
@@ -525,11 +485,43 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 		RegionAttackCount[PartsName] = 1;
 	}
 	
-
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("Damage Count: %d"), RegionAttackCount[PartsName]));
-
 }
 
+void ABoss::HandleDamageToKneeItem(FName PartsName)
+{
+	if (!KneeItemNames.Contains(PartsName))
+	{
+		return;
+	}
+	
+	// 해당 부위의 머티리얼 색상 변경
+	ApplyPartsDamaged(PartsName);
+
+	// 해당 부위의 Attack Count 증가
+	if (RegionAttackCount.FindOrAdd(PartsName))
+	{
+		if (RegionAttackCount[PartsName] >= KneeitemDestroyCount)
+		{
+			DestroyRegion(PartsName);
+			++KneeItemDestroyedCount;
+		}
+		else
+		{
+			++RegionAttackCount[PartsName];	
+		}
+	}
+	else
+	{
+		RegionAttackCount[PartsName] = 1;
+	}
+	
+	if (KneeItemDestroyedCount >= 6)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, "KneeItemDestroyedCount");
+		BerserkType = EBossBerserkType::Transition;
+		SetPatternTimer(1);
+	}
+}
 
 
 float ABoss::GetDistanceToPlayer()
@@ -563,7 +555,6 @@ FRotator ABoss::GetBoneRotation(FName BoneName)
 	return BoneTargetRotation;
 }
 
-
 void ABoss::IsInBusterBound(float& Distance)
 {
 	// 패턴 인식 거리보다 멀다면 return
@@ -572,7 +563,6 @@ void ABoss::IsInBusterBound(float& Distance)
 		// 시간 측정 중이었다면 Timer 초기화
 		if (bIsBusterTimerTriggered)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Init");
 			GetWorldTimerManager().ClearTimer(BusterPatternTimer);
 			bIsBusterTimerTriggered = false;
 		}
@@ -584,7 +574,6 @@ void ABoss::IsInBusterBound(float& Distance)
 		// 시간 측정 중이 아니었다면 Timer 가동
 		if (!bIsBusterTimerTriggered)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Timer Start");
 			GetWorldTimerManager().SetTimer(
 				BusterPatternTimer,
 				this,
@@ -600,7 +589,6 @@ void ABoss::IsInBusterBound(float& Distance)
 
 void ABoss::SetNormalAttackTimer()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, "Normal Start");
 	bIsAttacking = true;
 	// 중복 활성화 방지
 	GetWorldTimerManager().ClearTimer(NormalPatternTimer);
@@ -623,7 +611,6 @@ void ABoss::SetNormalAttackTimer()
 		false
 		);
 }
-
 
 void ABoss::IsFirstGroggyTriggered()
 {
@@ -681,6 +668,108 @@ void ABoss::IsCurrentHealthZero()
 	}
 }
 
+void ABoss::IsBerserkTriggered()
+{
+	// 버서커 패턴이 발동된 적이 있다면 return
+	if (BerserkType != EBossBerserkType::Default) return;
+	
+	// 현재 체력이 버서커 패턴이 발동되는 체력보다 낮은 지 확인
+	if (Status.Health <= BerserkMinHealth)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "Berserk");
+		// 버서커 패턴 발동 가능 상태로 전이
+		BerserkType = EBossBerserkType::Triggered;
+
+		GetWorldTimerManager().ClearTimer(SummonPatternTimer);
+		GetWorldTimerManager().ClearTimer(FlamePatternTimer);
+		
+		// 소환 타이머 가동
+		GetWorldTimerManager().SetTimer(
+			SummonPatternTimer,
+			this,
+			&ABoss::SummonPatternStart,
+			SummonPatternInterval/2,
+			true,
+			SummonPatternInterval/2);
+
+		// 플레임 타이머 가동
+		GetWorldTimerManager().SetTimer(
+			FlamePatternTimer,
+			this,
+			&ABoss::FlamePatternStart,
+			FlameExplosionPatternInterval,
+			true,
+			FlameExplosionPatternInterval/2);
+	}
+}
+
+void ABoss::RotationToTargetWithAllBones(float DeltaSeconds)
+{
+	// 보스와 플레이어의 현재 위치를 가져옴
+	FVector BossLocation = GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// 정규화된 방향 벡터
+	FVector Direction = (PlayerLocation - BossLocation).GetSafeNormal();
+
+	// 목표 회전 각도 계산 (Yaw만 변경)
+	FRotator TargetRotation = Direction.Rotation();
+	TargetRotation.Pitch = 0;
+
+	// 현재 회전 값 가져오기
+	FRotator CurrentRotation = GetActorRotation();
+
+	// 일정 속도로 회전
+	FRotator NewRotation = FMath::RInterpConstantTo(CurrentRotation, TargetRotation, DeltaSeconds, RotationSpeed);
+
+	// 보스 회전 적용
+	SetActorRotation(NewRotation);
+}
+
+
+void ABoss::IsBerserkTransitionPossible()
+{
+	// 그로기 상태이거나 공격 중이라면 return
+	if (bIsGroggy || !bIsAttacking) return;
+
+	// 버서커 패턴 발동 가능 상태인지 확인
+	if (BerserkType == EBossBerserkType::Triggered)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "Berserk Transition");
+
+		// 버서커 애니메이션 재생 상태로 전이
+		BerserkType = EBossBerserkType::Transition;
+		SetPatternTimer(PatternAdjustmentValue);
+	}
+}
+
+void ABoss::SetPatternTimer(int32 AdjustmentValue)
+{
+
+	GetWorldTimerManager().ClearTimer(SummonPatternTimer);
+	GetWorldTimerManager().ClearTimer(FlamePatternTimer);
+
+	// 소환 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		SummonPatternTimer,
+		this,
+		&ABoss::SummonPatternStart,
+		SummonPatternInterval / AdjustmentValue,
+		true,
+		SummonPatternInterval / AdjustmentValue);
+
+	// 플레임 타이머 가동
+	GetWorldTimerManager().SetTimer(
+		FlamePatternTimer,
+		this,
+		&ABoss::FlamePatternStart,
+		FlameExplosionPatternInterval / AdjustmentValue,
+		true,
+		FlameExplosionPatternInterval/ AdjustmentValue);
+}
+
+
+
 #pragma endregion
 
 #pragma region InitMovementState Functions
@@ -688,10 +777,6 @@ void ABoss::InitMovementStateToIdle()
 {
 	// Idle로 초기화
 	MovementState = EBossMovementState::Idle;
-
-	// AI 작동 정지
-	if (BossController == nullptr) return;
-	//BossController->StopMovement();
 
 	// Idle Timer 초기화
 	GetWorldTimerManager().SetTimer(
@@ -765,15 +850,13 @@ void ABoss::SetMoveState()
 	// 보스, 플레이어 사이의 거리 계산
 	float Distance = GetDistanceToPlayer();
 	IsInBusterBound(Distance);
-	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Distance %s"), *UEnum::GetValueAsString(MovementState)));
-	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Emerald, FString::Printf(TEXT("Velocity %f"), GetCharacterMovement()->Velocity.Length()));
+
 	switch (MovementState)
 	{
 		// (1) 플레이어에게 전진하는 상태
 	case EBossMovementState::Approaching:
 		if (Distance < ApproachAcceptance)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
 			MovementState = EBossMovementState::Surrounding;
 		}
 		break;
@@ -782,12 +865,10 @@ void ABoss::SetMoveState()
 	case EBossMovementState::Surrounding:
 		if (Distance > MaxRadius)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Approaching !");
 			MovementState = EBossMovementState::Approaching;
 		}
 		else if (Distance < MinRadius)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To BackMoving !");
 			MovementState = EBossMovementState::BackMoving;
 		}
 		break;
@@ -796,7 +877,6 @@ void ABoss::SetMoveState()
 	case EBossMovementState::BackMoving:
 		if (Distance > BackMovingAcceptance)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Boss Changed Move State To Surrounding !");
 			MovementState = EBossMovementState::Surrounding;
 		}
 		break;
