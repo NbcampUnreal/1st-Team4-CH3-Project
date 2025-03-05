@@ -764,8 +764,8 @@ void APlayerCharacter::PlayLandSound()
 	// {
 	// 	LandSoundToPlay = LandSound;
 	// }
-	
-	if (LandSound)
+	EPhysicalSurface PhysicalSurface = GetSurfaceTypeOnFoot();
+	if (USoundBase* LandSound = GetLandSound(PhysicalSurface))
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
 	}
@@ -779,6 +779,19 @@ void APlayerCharacter::Landed(const FHitResult& Hit)
 	{
 		PlayLandSound();
 	}
+}
+
+USoundBase* APlayerCharacter::GetLandSound(EPhysicalSurface PhysicalSurface) const
+{
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType_Default)
+	{
+		return  GroundLandSound;
+	}
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType1)
+	{
+		return  WaterLandSound;
+	}
+	return nullptr;
 }
 
 bool APlayerCharacter::CanFire() const

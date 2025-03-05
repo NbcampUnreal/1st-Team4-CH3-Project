@@ -281,7 +281,10 @@ protected:
 	class USoundBase* SprintFootStepSound;
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
-	class USoundBase* LandSound;
+	class USoundBase* GroundLandSound;
+	/** 수면 착지 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WaterLandSound;
 	/** 구르기 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* DodgeSound;
@@ -427,6 +430,7 @@ protected:
 	void UpdateCameraArmLength(float DeltaSeconds);
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
+	USoundBase* GetLandSound(EPhysicalSurface PhysicalSurface) const;
 	/** 착지 소리 재생, 착지 속력에 따라 소리를 재생한다. */
 	void PlayLandSound();
 	/** 사격 가능 여부를 확인*/
