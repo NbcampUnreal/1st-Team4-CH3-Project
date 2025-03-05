@@ -74,6 +74,8 @@ APlayerCharacter::APlayerCharacter()
 	bShouldHandGrab = true;
 
 	DodgeSoundProbability = 0.5f;
+	ReloadSoundProbability = 0.8f;
+	ReloadWordMinAmmo = 15;
 	
 	Tags.Add(TEXT("Player"));
 }
@@ -1025,6 +1027,19 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 	bIsReloading = true;
 	bIsUpperBodyActive = true;
 	bShouldHandGrab = false;
+
+	int AmmoToReload = CurrentWeapon->GetMaxAmmoInMagazine() - CurrentWeapon->GetCurrentAmmo();
+	if (FMath::FRand() < ReloadSoundProbability)
+	{
+		if (ReloadWordSound && AmmoToReload >= ReloadWordMinAmmo)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ReloadWordSound, GetActorLocation());
+		}
+		else if (ReloadEffectSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ReloadEffectSound, GetActorLocation());
+		}
+	}
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();

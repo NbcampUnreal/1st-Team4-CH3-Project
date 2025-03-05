@@ -282,11 +282,24 @@ protected:
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* LandSound;
+	/** 구르기 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* DodgeSound;
+	/** 구르기 사운드 재생 확률 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float DodgeSoundProbability;
-	
+	/** 장전할 때 소리, 단어가 아님 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ReloadEffectSound;
+	/** 장전할 떄 소리, 단어 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ReloadWordSound;
+	/** 장전했을 때 소리 재생 확률 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ReloadSoundProbability;
+	/** 장전 소리 재생했을 때 단어를 말하기 위한 최소 장전 총알 개수 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	int32 ReloadWordMinAmmo;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)

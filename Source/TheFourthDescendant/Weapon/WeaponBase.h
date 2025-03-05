@@ -139,6 +139,9 @@ public:
 	/** 현재 탄약 수를 반환 */
 	UFUNCTION(BlueprintPure)
 	int GetCurrentAmmo() const { return CurrentAmmo; }
+	/** 최대 탄약 수를 반환 */
+	UFUNCTION(BlueprintPure)
+	int GetMaxAmmoInMagazine() const { return MaxAmmoInMagazine; }
 
 	/** 무기를 발사 */
 	void StartShoot();
