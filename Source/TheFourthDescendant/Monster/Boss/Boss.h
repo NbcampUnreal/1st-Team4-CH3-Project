@@ -52,6 +52,12 @@ class THEFOURTHDESCENDANT_API ABoss : public ACharacterBase
 
 public:
 	ABoss();
+
+public:
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHitInfo, FHitResult, HitResult, float, Damage);
+	/** 피격되었을 때 호출되는 위치를 전파하기 위한 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Boss|Events")
+	FOnHitInfo OnHitInfo;
 	
 public:
 	/** Bone 회전을 위한 SkeletalMesh 선언 */
