@@ -80,6 +80,10 @@ APlayerCharacter::APlayerCharacter()
 
 	ShieldBrokenSoundCoolDown = 10.0f;
 	bCanPlayShieldBrokenSound = true;
+
+	DamageSoundProbability = 0.5f;
+	DamageSoundCoolDown = 2.0f;
+	bCanPlayDamageSound = true;
 	
 	Tags.Add(TEXT("Player"));
 }
@@ -612,8 +616,23 @@ void APlayerCharacter::BeginPlay()
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
+void APlayerCharacter::OnDamageSoundCoolDown()
+{
+	bCanPlayDamageSound = true;
+}
+
+void APlayerCharacter::PlayDamageSound()
+{
+	if (DamageSound && bCanPlayDamageSound && FMath::FRand() < DamageSoundProbability)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DamageSound, GetActorLocation());
+		bCanPlayDamageSound = false;
+		GetWorldTimerManager().SetTimer(DamageSoundTimerHandle, this, &APlayerCharacter::OnDamageSoundCoolDown, DamageSoundCoolDown, false);
+	}
+}
+
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-	class AController* EventInstigator, AActor* DamageCauser)
+                                   class AController* EventInstigator, AActor* DamageCauser)
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	OnTakeDamage.Broadcast(FDamageInfo(Status));
@@ -622,6 +641,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	{
 		PlayShieldBrokenSound();
 	}
+	PlayDamageSound();
 	
 	if (Status.Shield < Status.MaxShield)
 	{

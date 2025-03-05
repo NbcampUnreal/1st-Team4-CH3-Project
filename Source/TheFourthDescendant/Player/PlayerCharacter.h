@@ -315,6 +315,14 @@ protected:
 	/** bCanPlayShieldBrokenSound 재생을 업데이트할 타이머 핸들 */
 	FTimerHandle ShieldBrokenSoundTimerHandle;
 	float PrevShield;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* DamageSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DamageSoundProbability;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DamageSoundCoolDown;
+	FTimerHandle DamageSoundTimerHandle;
+	bool bCanPlayDamageSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -395,6 +403,8 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	void OnDamageSoundCoolDown();
+	void PlayDamageSound();
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 	/** 입력으로부터 IsAiming변수를 갱신, 공격 중이거나 조준 중이면 True가 된다. */
