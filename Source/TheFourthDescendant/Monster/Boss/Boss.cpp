@@ -158,9 +158,11 @@ void ABoss::OnDeath()
 	// 사망 플래그 값으로 애니메이션 재생
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
-	TArray<AActor*> RangedMonsters;
-	UGameplayStatics::GetAllActorsWithTag(this, TEXT("Monster"), RangedMonsters);
-	for(AActor* Actor : RangedMonsters)
+
+	// 남아있는 모든 몬스터 사망 처리
+	TArray<AActor*> Monsters;
+	UGameplayStatics::GetAllActorsWithTag(this, TEXT("Monster"), Monsters);
+	for(AActor* Actor : Monsters)
 	{
 		if(AMonster* Monster = Cast<AMonster>(Actor))
 		{
