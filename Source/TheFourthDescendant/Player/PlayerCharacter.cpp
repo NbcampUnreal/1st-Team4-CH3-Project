@@ -77,6 +77,9 @@ APlayerCharacter::APlayerCharacter()
 	DodgeSoundProbability = 0.5f;
 	ReloadSoundProbability = 0.8f;
 	ReloadWordMinAmmo = 15;
+
+	ShieldBrokenSoundCoolDown = 10.0f;
+	bCanPlayShieldBrokenSound = true;
 	
 	Tags.Add(TEXT("Player"));
 }
@@ -264,6 +267,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 	UpdateIsAiming();
 	UpdateYawControl();
 	UpdateCameraArmLength(DeltaSeconds);
+	PrevShield = Status.Shield;
 }
 
 void APlayerCharacter::SetInvincibility(bool bEnable)
@@ -604,6 +608,7 @@ void APlayerCharacter::BeginPlay()
 		Equip(WeaponSlots[0]);
 	}
 
+	PrevShield = Status.Shield;
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
 }
 
@@ -612,6 +617,11 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 {
 	float Amount = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	OnTakeDamage.Broadcast(FDamageInfo(Status));
+
+	if (PrevShield > 0 && Status.Shield == 0)
+	{
+		PlayShieldBrokenSound();
+	}
 	
 	if (Status.Shield < Status.MaxShield)
 	{
@@ -628,7 +638,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 		// 사망 처리
 		Die();
 	}
-	
+
 	return  Amount;
 }
 
@@ -858,6 +868,25 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 		CurrentWeapon->Reload(AmmoInventory[WeaponAmmoType]);
 		OnTotalAmmoChanged.Broadcast(CurrentWeapon->GetAmmoType(), AmmoInventory[WeaponAmmoType]);
 	}
+}
+
+void APlayerCharacter::OnShieldBrokenSoundCoolDown()
+{
+	bCanPlayShieldBrokenSound = true;
+}
+
+void APlayerCharacter::PlayShieldBrokenSound()
+{
+	if (bCanPlayShieldBrokenSound && ShieldBrokenWordSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ShieldBrokenWordSound, GetActorLocation());
+		bCanPlayShieldBrokenSound = false;
+		GetWorldTimerManager().SetTimer(ShieldBrokenSoundTimerHandle, this, &APlayerCharacter::OnShieldBrokenSoundCoolDown, ShieldBrokenSoundCoolDown, false);
+	}
+	else if (ShieldBrokenSound && FMath::FRand() < ShieldBrokenSoundProbability)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ShieldBrokenSound, GetActorLocation());
+    }
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)

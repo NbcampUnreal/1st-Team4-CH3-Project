@@ -300,6 +300,21 @@ protected:
 	/** 장전 소리 재생했을 때 단어를 말하기 위한 최소 장전 총알 개수 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	int32 ReloadWordMinAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ShieldBrokenSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* ShieldBrokenWordSound;
+	/** 실드 파괴 사운드 재생 확률 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ShieldBrokenSoundProbability;
+	/** 실드 파괴 시에 다시 실드 파괴 사운드를 재생할 때까지의 쿨타임*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float ShieldBrokenSoundCoolDown;
+	/** 실드 파괴 단어 재생 여부 */
+	bool bCanPlayShieldBrokenSound;
+	/** bCanPlayShieldBrokenSound 재생을 업데이트할 타이머 핸들 */
+	FTimerHandle ShieldBrokenSoundTimerHandle;
+	float PrevShield;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -417,6 +432,9 @@ protected:
 	UFUNCTION()
 	void OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void OnShieldBrokenSoundCoolDown();
+	void PlayShieldBrokenSound();
+	
 	/** IA_Move 바인딩 함수, WS : X축, AD : Y축, 캐릭터의 X축, Y축과 동일하게 맵핑
 	 * 질주 시에는 앞으로는 가능하지만 후방으로는 걷기 속도로 이동한다.
 	 */
