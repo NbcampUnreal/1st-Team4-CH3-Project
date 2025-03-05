@@ -35,6 +35,8 @@ private:
 	bool bIsAttacked;
 
 public:
+	/** 사망 로직 함수 */
+	virtual void OnDeath() override;
 	/** 공격 함수 */
 	UFUNCTION(BlueprintCallable)
 	virtual void Attack() override;
@@ -51,4 +53,8 @@ protected:
 	UFUNCTION()
 	void OnAttackRangeOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/** 체력바 UI 제거하는 함수 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void DestroyWidget();
 };

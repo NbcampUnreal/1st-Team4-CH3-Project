@@ -37,6 +37,8 @@ private:
 	FCollisionQueryParams Params;
 
 public:
+	/** 사망 로직 함수 */
+	virtual void OnDeath() override;
 	/** 공격 함수 */
 	virtual void Attack() override;
 	/** 이동 함수 */
@@ -49,4 +51,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	/** 체력바 UI 제거하는 함수 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void DestroyWidget();
 };
