@@ -119,8 +119,10 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 		FHitResult HitResult = PointDamage->HitInfo;
 		FName RegionName = *HitResult.PhysicsObjectOwner->GetName();
 		HandleDamageToPart(RegionName, DamageAmount);
-		HandleDamageToKneeItem(RegionName);	
-		
+		HandleDamageToKneeItem(RegionName);
+
+		// 충돌 결과 전파
+		OnHitInfo.Broadcast(HitResult, DamageAmount);		
 	}
 	
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
