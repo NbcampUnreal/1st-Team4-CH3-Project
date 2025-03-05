@@ -14,6 +14,7 @@
 #include "TheFourthDescendant/Monster/Projectile/HomingProjectile.h"
 #include "TheFourthDescendant/Monster/Projectile/MissileProjectile.h"
 #include "TheFourthDescendant/Monster/Projectile/ProjectileBase.h"
+#include "TheFourthDescendant/Monster/Ranged/RangedMonster.h"
 #include "TheFourthDescendant/Player/PlayerCharacter.h"
 
 #pragma region InitComponent
@@ -157,7 +158,20 @@ void ABoss::OnDeath()
 	// 사망 플래그 값으로 애니메이션 재생
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
-
+	TArray<AActor*> RangedMonsters;
+	UGameplayStatics::GetAllActorsWithTag(this, TEXT("Monster"), RangedMonsters);
+	for(AActor* Actor : RangedMonsters)
+	{
+		if(AMonster* Monster = Cast<AMonster>(Actor))
+		{
+			Monster->OnDeath();
+		}
+		else
+		{
+			Actor->Destroy();
+		}
+	}
+	
 	// 죽인 적 수 반영
 	UGameInstance* GameInstance = GetGameInstance();
 	UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
