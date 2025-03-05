@@ -64,7 +64,7 @@ FShootResult AProjectileWeapon::PerformAttack()
 			TargetLocation,
 			ProjectileSpeed
 		);
-		Params.bDrawDebug = true;
+		// Params.bDrawDebug = true;
 		Params.bFavorHighArc = false;
 		Params.ActorsToIgnore = { GetOwner(), this };
 		Params.TraceOption = ESuggestProjVelocityTraceOption::OnlyTraceWhileAscending;
@@ -74,7 +74,7 @@ FShootResult AProjectileWeapon::PerformAttack()
 		{
 			if (ProjectileClass)
 			{
-				UE_LOG(LogTemp, Display, TEXT("Projectile velocity suggested: %s"), *LaunchVelocity.ToString());
+				// UE_LOG(LogTemp, Display, TEXT("Projectile velocity suggested: %s"), *LaunchVelocity.ToString());
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.Owner = GetOwner();
 				SpawnParams.Instigator = GetInstigator();
