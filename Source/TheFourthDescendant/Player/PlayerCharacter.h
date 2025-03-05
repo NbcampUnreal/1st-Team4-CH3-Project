@@ -113,8 +113,13 @@ protected:
 	// FStateMachineContext StateMachineContext;
 	FTimerHandle DeathMontageTimerHandle;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	/** 무적 상태 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
 	bool bInvincible;
+	/** 회피 무적 여부 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
+	bool bDodgeInvincible;
+	/** 현재 사망 상태 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
 	bool bIsDeath;
 
@@ -163,6 +168,8 @@ protected:
 	bool bIsUpperBodyActive;
 	/** 캐릭터 이동 입력 여부 */
 	bool bIsMoving;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Locomotion")
+	bool bShouldHandGrab;
 
 	/** 구르기 기준점이 되는 속도, Curve의 값에 곱해진다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Dodge")
@@ -295,6 +302,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetInvincibility(bool bEnable);
+	/** 현재 무적 여부 확인 */
+	UFUNCTION(BlueprintCallable)
+	bool IsInvincible() const;
+	/** 무적 상태, 구르기 무적 상태를 기준으로 현재 무적 상태 갱신 */
+	void UpdateInvincible();
 	
 	/** Amount 만큼 체력을 증가 */
 	UFUNCTION(BlueprintCallable)
@@ -376,6 +388,8 @@ protected:
 	void OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
 	/** 구르기 동안 속도를 갱신하는 함수, Curve 데이터를 이용해서 현재 시간의 속도를 반영한다. */
 	void OnDodgeUpdate();
+	/** 구르기 무적 설정 */
+	void SetDodgeInvincible(bool bEnable);
 	
 	/** 소지하고 있지 않은 탄환을 0으로 초기화*/
 	void InitAmmoInventory();

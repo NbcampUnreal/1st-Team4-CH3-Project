@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "CharacterBase.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTakeDamageDispatcher, float, HPPercent, float, SPPercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FTakeDamageDispatcher, float, HPPercent, float, SPPercent, float, ActualDamage);
 
 USTRUCT(BlueprintType)
 struct FStatus

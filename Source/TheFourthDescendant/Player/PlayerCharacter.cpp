@@ -33,6 +33,7 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	bInvincible = false;
+	bDodgeInvincible = false;
 	bIsDeath = false;
 
 	ShieldRechargeRate = 10.0f;
@@ -70,8 +71,8 @@ APlayerCharacter::APlayerCharacter()
 
 	FootStepInterval = 0.3f;
 	MinFallSpeedForLandSound = 400.0f;
+	bShouldHandGrab = true;
 
-	JumpMaxCount = 2;	
 	Tags.Add(TEXT("Player"));
 }
 
@@ -262,9 +263,24 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 void APlayerCharacter::SetInvincibility(bool bEnable)
 {
+	const bool bWasInvincible = IsInvincible();
 	bInvincible = bEnable;
+	if (bWasInvincible == IsInvincible())
+	{
+		return;
+	}
 
-	if (bInvincible)
+	UpdateInvincible();
+}
+
+bool APlayerCharacter::IsInvincible() const
+{
+	return bInvincible || bDodgeInvincible;
+}
+
+void APlayerCharacter::UpdateInvincible()
+{
+	if (IsInvincible())
 	{
 		GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 		GetCapsuleComponent()->RecreatePhysicsState();
@@ -437,6 +453,7 @@ void APlayerCharacter::EquipWeaponByIndex(int I)
 
 	bIsExchangeWeapon = true;
 	bIsUpperBodyActive = true;
+	bShouldHandGrab = false;
 
 	StartExchangeAnim(I);
 }
@@ -459,6 +476,7 @@ void APlayerCharacter::OnUnEquipMontageEnded(UAnimMontage* AnimMontage, bool bIn
 {
 	AWeaponBase* NextWeapon = WeaponSlots[WeaponSlotIndex];
 	Equip(NextWeapon);
+	bShouldHandGrab = true;
 
 	if (bInterrupted)
 	{
@@ -759,7 +777,7 @@ UAnimMontage* APlayerCharacter::GetDodgeMontage(const FVector& LocalDodgeDirecti
 void APlayerCharacter::OnDodgeMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 {
 	bIsFullBodyActive = false;
-	SetInvincibility(false);
+	SetDodgeInvincible(false);
 
 	GetWorldTimerManager().ClearTimer(DodgeUpdateTimerHandle);
 }
@@ -777,6 +795,12 @@ void APlayerCharacter::OnDodgeUpdate()
 
 	DodgeVelocity.Z = CurrentVelocity.Z;
 	GetCharacterMovement()->Velocity = DodgeVelocity;
+}
+
+void APlayerCharacter::SetDodgeInvincible(bool bEnable)
+{
+	bDodgeInvincible = bEnable;
+	UpdateInvincible();
 }
 
 void APlayerCharacter::InitAmmoInventory()
@@ -810,6 +834,7 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 {
 	bIsReloading = false;
 	bIsUpperBodyActive = false;
+	bShouldHandGrab = true;
 	
 	GetWorldTimerManager().ClearTimer(ReloadUIUpdateTimerHandle);
 	if (CurrentWeapon && !bInterrupted)
@@ -903,7 +928,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	if (bIsFullBodyActive || bIsDeath) return;;
 	
 	bIsFullBodyActive = true;
-	SetInvincibility(true);
+	SetDodgeInvincible(true);
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
@@ -993,6 +1018,7 @@ void APlayerCharacter::Reload(const FInputActionValue& Value)
 
 	bIsReloading = true;
 	bIsUpperBodyActive = true;
+	bShouldHandGrab = false;
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* ReloadMontage = CurrentWeapon->GetReloadMontage();
