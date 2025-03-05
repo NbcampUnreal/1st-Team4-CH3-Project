@@ -13,7 +13,7 @@ ABulletItem::ABulletItem()
 
 void ABulletItem::ActivateItem(AActor* Activator)
 {
-	
+	Super::ActivateItem(Activator);
 }
 
 

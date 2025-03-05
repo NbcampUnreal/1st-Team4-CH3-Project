@@ -60,6 +60,9 @@ protected:
 	/* 웨이브 1용 스폰 위치 배열 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
 	TArray<FTransform> FirstWaveTransformArray;
+	/* 웨이브 1용 스폰 위치 배열 */
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
+	TArray<FTransform> SecondWaveTransformArray;
 	/* 웨이브 3용 근거리 몬스터 스폰 위치 배열 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Default", meta = (MakeEditWidget))
 	TArray<FTransform> ThirdWaveMeleeTransformArray;
@@ -75,8 +78,6 @@ private:
 public:
 	/* 몬스터 하나를 스폰시키는 함수 */
 	void Spawn(EMonsterType MonsterType, const FTransform& SpawnTransform);
-	/* 몬스터 하나를 랜덤 스폰시키는 함수 */
-	void RandomSpawn(EMonsterType MonsterType);
 	/* 몬스터 웨이브를 스폰시키는 함수 */
 	void SpawnMonsters(int32 LevelIndex);
 protected:

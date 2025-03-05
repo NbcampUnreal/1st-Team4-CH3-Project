@@ -17,6 +17,8 @@ ANormalBulletItem::ANormalBulletItem()
 
 void ANormalBulletItem::ActivateItem(AActor* Activator)
 {
+	Super::ActivateItem(Activator);
+	
 	if (Activator && Activator->ActorHasTag("Player"))
 	{		
 		if (APlayerCharacter* Player = Cast<APlayerCharacter>(Activator))
