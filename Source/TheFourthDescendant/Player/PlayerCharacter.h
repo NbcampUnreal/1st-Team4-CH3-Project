@@ -259,6 +259,38 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
 	TMap<EWeaponType, UAnimMontage*> DeathMontages;
 
+	// SkillC
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	UAnimMontage* SkillCStartMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	UAnimMontage* SkillCEndMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCCoolDown;
+	FTimerHandle SkillCTimerHandle;
+	bool bCanUseSkillC;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillRange;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCUpdateInterval;
+	float SkillCElapsedTime;
+	float SkillCAttackElapsedTime;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCAttackInterval;
+	bool bIsUsingSkillC;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Player|Skill")
+	float SkillCLength;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	class UNiagaraSystem* SkillCParticle;
+	UPROPERTY()
+	class UNiagaraComponent* SkillCParticleComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCDamage;
+
+	
 	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float FootStepInterval;
@@ -331,6 +363,8 @@ protected:
 	float DamageSoundCoolDown;
 	FTimerHandle DamageSoundTimerHandle;
 	bool bCanPlayDamageSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* SkillCSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -459,6 +493,10 @@ protected:
 	UFUNCTION()
 	void OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void OnSkillCCoolDown();
+	void OnSkillCUpdate();
+	void OnSkillCStartMontageEnded(UAnimMontage* AnimMontage, bool bInteruppted);
+	
 	void OnShieldBrokenSoundCoolDown();
 	void PlayShieldBrokenSound();
 	
@@ -514,4 +552,10 @@ protected:
 	void EquipWeaponSlot2(const FInputActionValue& InputActionValue);
 	UFUNCTION()
 	void EquipWeaponSlot3(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillZ(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillX(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillC(const FInputActionValue& InputActionValue);
 };

@@ -5,11 +5,14 @@
 
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
@@ -78,6 +81,14 @@ APlayerCharacter::APlayerCharacter()
 	ReloadSoundProbability = 0.8f;
 	ReloadWordMinAmmo = 15;
 
+	bCanUseSkillC = true;
+	bIsUsingSkillC = false;
+	SkillCLength = 1500.0f;
+	SkillCUpdateInterval = 0.1f;
+	SkillCElapsedTime = 0.0f;
+	SkillCDamage = 10.0f;
+	SkillCAttackInterval = 0.1f;
+	
 	ShieldBrokenSoundCoolDown = 10.0f;
 	bCanPlayShieldBrokenSound = true;
 
@@ -259,6 +270,36 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 			        this,
 			        &APlayerCharacter::EquipWeaponSlot3
 			    );
+			}
+
+			if (PlayerController->ActivateSkillZAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillZAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillZ
+				);
+			}
+
+			if (PlayerController->ActivateSkillXAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillXAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillX
+				);
+			}
+
+			if (PlayerController->ActivateSkillCAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillCAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillC
+				);
 			}
 		}
 	}
@@ -740,7 +781,8 @@ void APlayerCharacter::UpdateYawControl()
 	// 현재의 난관은 이동하면서 다른 동작이 가능해서 State를 명확하게 표현하기 어렵다는 점이고 Animation이나 다른 것에서 상태 전이를 해야 된다는 점이다.
 
 	// 이동 중이거나 실제 조준 중일 때는 회전
-	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive))
+	// 스킬 사용중이거나
+	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive) || bIsUsingSkillC)
 	{
 		bUseControllerRotationYaw = true;
 	}
@@ -957,6 +999,101 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	}
 }
 
+void APlayerCharacter::OnSkillCCoolDown()
+{
+	bCanUseSkillC = true;
+}
+
+void APlayerCharacter::OnSkillCUpdate()
+{
+	SkillCElapsedTime += SkillCUpdateInterval;
+	SkillCAttackElapsedTime += SkillCUpdateInterval;
+
+	float Progress = SkillCElapsedTime / SkillCDuration;
+	UE_LOG(LogTemp, Display, TEXT("Skill C Progress : %f"), Progress);
+
+	// 공격 이펙트 재생
+	if (!SkillCParticleComponent && SkillCElapsedTime > 0.2f)
+	{
+		SkillCParticleComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(SkillCParticle,
+			GetMesh(),
+			TEXT("LHandWeaponSocket"),
+			FVector::ZeroVector,
+			FRotator(90.0f, 0.0f, 0.0f), // 모델이라 그런지 Pitch 90도가 Yaw 90도가 되는 것 같다.
+			EAttachLocation::SnapToTarget,
+			false
+		);
+	}
+
+	if (SkillCParticleComponent)
+	{
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		GetController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+		FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * SkillCLength;
+		FHitResult CameraHitResult;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+
+		FVector TargetEnd = CameraTraceEnd;
+		if (GetWorld()->LineTraceSingleByChannel(CameraHitResult, CameraLocation, CameraTraceEnd, ECollisionChannel::ECC_Pawn, QueryParams))
+		{
+			TargetEnd = CameraHitResult.ImpactPoint + CameraRotation.Vector() * 10.f;
+		}
+
+		FVector SocketLocation = GetMesh()->GetSocketLocation(TEXT("LHandWeaponSocket"));
+		FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(SocketLocation, TargetEnd);
+		SkillCParticleComponent->SetWorldRotation(LookAtRotation);
+
+		if (SkillCAttackElapsedTime > SkillCAttackInterval)
+		{
+			SkillCAttackElapsedTime -= SkillCAttackInterval;
+			TArray<FHitResult> AttackHitResults;
+			if (GetWorld()->LineTraceMultiByChannel(AttackHitResults, SocketLocation, TargetEnd, ECollisionChannel::ECC_Pawn, QueryParams))
+			{
+				for (FHitResult& HitResult : AttackHitResults)
+				{
+					if (AActor* HitActor = HitResult.GetActor();
+						HitActor && HitActor->IsA(ACharacterBase::StaticClass()))
+					{
+						FVector ShotDirection = (TargetEnd - SocketLocation).GetSafeNormal();
+                        				UGameplayStatics::ApplyPointDamage(HitActor, SkillCDamage, ShotDirection, HitResult, GetController(), this, UDamageType::StaticClass());
+					}
+				}
+			}
+		}
+	}
+	
+	if (SkillCElapsedTime >= SkillCDuration)
+	{
+		UE_LOG(LogTemp, Display, TEXT("Skill C End"));
+		bIsUpperBodyActive = false;
+		bIsUsingSkillC = false;
+		bShouldHandGrab = false;
+
+		SkillCParticleComponent->DeactivateImmediate();
+		SkillCParticleComponent = nullptr;
+		
+		CurrentWeapon->SetActorHiddenInGame(false);
+		
+		GetWorldTimerManager().ClearTimer(SkillCTimerHandle);
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Stop(0.0f, SkillCStartMontage);
+			AnimInstance->Montage_Play(SkillCEndMontage);
+		}
+
+		GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCCoolDown, SkillCCoolDown, false);
+	}
+}
+
+void APlayerCharacter::OnSkillCStartMontageEnded(UAnimMontage* AnimMontage, bool bInteruppted)
+{
+	SkillCElapsedTime = 0.0f;
+	GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCUpdate, SkillCUpdateInterval, true);
+}
+
 void APlayerCharacter::OnShieldBrokenSoundCoolDown()
 {
 	bCanPlayShieldBrokenSound = true;
@@ -1056,7 +1193,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
 	// 점프 중에는 회피를 할 수 없다.
 	if (GetMovementComponent()->IsFalling()) return;
-	if (bIsFullBodyActive || bIsDeath) return;;
+	if (bIsFullBodyActive || bIsDeath || bIsUsingSkillC) return;;
 	
 	bIsFullBodyActive = true;
 	SetDodgeInvincible(true);
@@ -1205,4 +1342,41 @@ void APlayerCharacter::EquipWeaponSlot3(const FInputActionValue& InputActionValu
 {
 	if (!Controller || bIsDeath) return;
 	EquipWeaponByIndex(2);
+}
+
+void APlayerCharacter::ActivateSkillZ(const FInputActionValue& InputActionValue)
+{
+}
+
+void APlayerCharacter::ActivateSkillX(const FInputActionValue& InputActionValue)
+{
+}
+
+void APlayerCharacter::ActivateSkillC(const FInputActionValue& InputActionValue)
+{
+	if (!Controller || bIsDeath) return;
+	if (!bCanUseSkillC || bIsFullBodyActive) return;
+
+	bIsUpperBodyActive = true;
+	bCanUseSkillC = false;
+	bIsUsingSkillC = true;
+	bShouldHandGrab = false;
+
+	CurrentWeapon->SetActorHiddenInGame(true);
+
+	SkillCElapsedTime = 0.0f;
+	SkillCAttackElapsedTime = 0.0f;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && SkillCStartMontage)
+	{
+		AnimInstance->Montage_Play(SkillCStartMontage);
+
+		GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCUpdate, SkillCUpdateInterval, true);
+	}
+
+	if (SkillCSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SkillCSound, GetActorLocation());
+	}
 }
