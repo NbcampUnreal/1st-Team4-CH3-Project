@@ -30,6 +30,9 @@ protected:
 	// 아이템 시각 표현용 스태틱 메시
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Component")
 	UStaticMeshComponent* StaticMesh;
+	// 아이템 획득 사운드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Effects")
+	USoundBase* PickupSound;
 
 	// IItemInterface에서 요구하는 함수들을 반드시 구현
 	virtual void OnItemOverlap(
