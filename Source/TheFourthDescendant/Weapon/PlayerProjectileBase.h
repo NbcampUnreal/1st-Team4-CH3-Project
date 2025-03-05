@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "PlayerProjectileBase.generated.h"
 
+class ATrailEffect;
+class UNiagaraComponent;
 class UNiagaraSystem;
 
 UCLASS()
@@ -20,6 +22,8 @@ public:
 	void LaunchProjectile(const FVector LaunchVelocity, float Damage, float ExplosionRadius);
 	
 protected:
+	virtual void BeginPlay() override;
+	
 	/** 충돌 발생 시의 이벤트 */
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
@@ -36,7 +40,9 @@ protected:
 	/** 투사체 폭발 Sfx */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
 	class USoundBase* ExplosionSfx;
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	TSubclassOf<ATrailEffect> TrailEffectClass;
+	TWeakObjectPtr<ATrailEffect> TrailEffect;
 private:
 	UPROPERTY(VisibleDefaultsOnly, Category="Projectile")
 	class USphereComponent* CollisionComponent;
