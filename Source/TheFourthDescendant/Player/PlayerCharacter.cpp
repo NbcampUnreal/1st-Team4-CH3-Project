@@ -995,7 +995,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(ForwardVector, MoveInput.X);
 		
 		// 전방으로 이동할 경우에만 Sprint 속도를 적용
-		if (MoveInput.X > 0 && bIsSprinting)
+		if (MoveInput.X > 0 && bIsSprinting && !bIsAiming)
 		{
 			GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 		}
