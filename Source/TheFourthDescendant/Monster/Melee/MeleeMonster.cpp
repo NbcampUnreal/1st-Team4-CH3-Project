@@ -61,6 +61,11 @@ void AMeleeMonster::Tick(float DeltaTime)
 }
 
 
+void AMeleeMonster::OnDeath()
+{
+	DestroyWidget();
+	Super::OnDeath();
+}
 
 void AMeleeMonster::Attack()
 {
