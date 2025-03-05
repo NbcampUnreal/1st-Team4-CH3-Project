@@ -3,7 +3,9 @@
 
 #include "PlayerProjectileBase.h"
 
+#include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "TrailEffect.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -43,8 +45,19 @@ void APlayerProjectileBase::LaunchProjectile(const FVector LaunchVelocity, const
 	ProjectileExplosionRadius = ExplosionRadius;
 }
 
+void APlayerProjectileBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (TrailEffectClass)
+	{
+		TrailEffect = GetWorld()->SpawnActor<ATrailEffect>(TrailEffectClass);
+		TrailEffect->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("TrailSocket"));
+	}
+}
+
 void APlayerProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-                            FVector NormalImpulse, const FHitResult& Hit)
+                                  FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (ExplosionVfx)
 	{
@@ -64,6 +77,12 @@ void APlayerProjectileBase::OnHit(UPrimitiveComponent* HitComponent, AActor* Oth
 			GetActorLocation(),
 			FRotator::ZeroRotator
 		);
+	}
+
+	if (TrailEffect.IsValid())
+	{
+		TrailEffect->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		TrailEffect->StopAndDestroy(2.0f);
 	}
 
 	UGameplayStatics::ApplyRadialDamage(
