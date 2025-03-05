@@ -323,6 +323,8 @@ protected:
 	float DamageSoundCoolDown;
 	FTimerHandle DamageSoundTimerHandle;
 	bool bCanPlayDamageSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	USoundBase* WaterDragSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -397,10 +399,13 @@ public:
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)
 	void AddAmmo(EAmmoType AmmoType, int Amount);
+	EPhysicalSurface GetSurfaceTypeOnFoot();
+	USoundBase* GetLandFootSound(float Speed) const;
 	/** 탄약의 총 개수를 반환 */
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
 
+	USoundBase* GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface);
 	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. AnimNotify로 BP로 실행 중 */
 	UFUNCTION(BlueprintCallable)
 	void PlayFootStepSound();

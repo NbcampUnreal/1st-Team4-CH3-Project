@@ -568,6 +568,51 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 }
 
 
+EPhysicalSurface APlayerCharacter::GetSurfaceTypeOnFoot()
+{
+	FHitResult LandHitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.bReturnPhysicalMaterial = true;
+	QueryParams.AddIgnoredActor(this);
+	FVector StartLocation = GetActorLocation() + FVector::UpVector * 10.0f;
+	FVector EndLocation = GetActorLocation() + FVector::DownVector * 100.0f;
+	if (GetWorld()->LineTraceSingleByChannel(LandHitResult, StartLocation, EndLocation, ECollisionChannel::ECC_Visibility, QueryParams))
+	{
+		return  UGameplayStatics::GetSurfaceType(LandHitResult);
+	}
+	return EPhysicalSurface::SurfaceType_Default;
+}
+
+USoundBase* APlayerCharacter::GetLandFootSound(const float Speed) const
+{
+	if (Speed < 250.f)
+	{
+		return  WalkFootStepSound;
+	}
+	if (Speed < 650.f)
+	{
+		return  RunFootStepSound;
+	}
+	if (Speed > 650.f)
+	{
+		return  SprintFootStepSound;
+	}
+	return nullptr;
+}
+
+USoundBase* APlayerCharacter::GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface)
+{
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType_Default)
+	{
+		return GetLandFootSound(Speed);
+	}
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType1)
+	{
+		return  WaterDragSound;
+	}
+	return nullptr;
+}
+
 void APlayerCharacter::PlayFootStepSound()
 {
 	if (GetWorld()->GetTimeSeconds() - LastFootStepTime < FootStepInterval)
@@ -576,23 +621,10 @@ void APlayerCharacter::PlayFootStepSound()
 	}
 
 	LastFootStepTime = GetWorld()->GetTimeSeconds();
-	
-	const float Speed = GetVelocity().Size();
-	USoundBase* FootStepSound;
-	if (Speed < 250.f)
-	{
-		FootStepSound = WalkFootStepSound;
-	}
-	else if (Speed < 650.f)
-	{
-		FootStepSound = RunFootStepSound;
-	}
-	else
-	{
-		FootStepSound = SprintFootStepSound;
-	}
 
-	if (FootStepSound)
+	const float Speed = GetVelocity().Size();
+	EPhysicalSurface PhysicalSurface = GetSurfaceTypeOnFoot();
+	if (USoundBase* FootStepSound = GetFootStepSound(Speed, PhysicalSurface))
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FootStepSound, GetActorLocation());
 	}
