@@ -279,6 +279,11 @@ protected:
 	/** 질주 발소리 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* SprintFootStepSound;
+	/** 수면 걷기 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	USoundBase* WaterDragSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WaterRunSound;
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* GroundLandSound;
@@ -326,8 +331,6 @@ protected:
 	float DamageSoundCoolDown;
 	FTimerHandle DamageSoundTimerHandle;
 	bool bCanPlayDamageSound;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
-	USoundBase* WaterDragSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -408,6 +411,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
 
+	USoundBase* GetWaterFootSound(float Speed);
 	USoundBase* GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface);
 	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. AnimNotify로 BP로 실행 중 */
 	UFUNCTION(BlueprintCallable)

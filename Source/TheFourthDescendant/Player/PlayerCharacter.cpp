@@ -600,6 +600,20 @@ USoundBase* APlayerCharacter::GetLandFootSound(const float Speed) const
 	return nullptr;
 }
 
+USoundBase* APlayerCharacter::GetWaterFootSound(float Speed)
+{
+	if (Speed < 450.0f)
+	{
+		return WaterDragSound;
+	}
+	if (Speed <= 800.0f)
+	{
+		return WaterRunSound;
+	}
+	
+	return nullptr;
+}
+
 USoundBase* APlayerCharacter::GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface)
 {
 	if (PhysicalSurface == EPhysicalSurface::SurfaceType_Default)
@@ -608,7 +622,7 @@ USoundBase* APlayerCharacter::GetFootStepSound(float Speed, EPhysicalSurface Phy
 	}
 	if (PhysicalSurface == EPhysicalSurface::SurfaceType1)
 	{
-		return  WaterDragSound;
+		return  GetWaterFootSound(Speed);
 	}
 	return nullptr;
 }
