@@ -36,7 +36,7 @@ AWeaponBase::AWeaponBase()
 	MaxAmmoInMagazine = 30;
 	CurrentAmmo = MaxAmmoInMagazine;
 
-	AttachRotator = FRotator::ZeroRotator;
+	MuzzleFlashAttachRotator = FRotator::ZeroRotator;
 }
 
 void AWeaponBase::Tick(float DeltaSeconds)
@@ -126,7 +126,7 @@ void AWeaponBase::Attack()
 			WeaponMesh,
 			FName(GetMuzzleSocketName()),
 			FVector::ZeroVector,
-			FRotator::ZeroRotator,
+			MuzzleFlashAttachRotator,
 			EAttachLocation::Type::SnapToTarget,
 			true
 		);

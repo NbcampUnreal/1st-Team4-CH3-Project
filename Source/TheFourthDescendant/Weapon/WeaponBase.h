@@ -58,9 +58,6 @@ public:
 	/** 사격 발생 시에 발생할 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
 	FOnShootTriggered OnShootTriggered;
-
-	FRotator AttachRotator;
-	
 protected:
 	/** ApplyRecoil을 호출해서 반동 감쇄*/
 	virtual void Tick(float DeltaSeconds) override;
@@ -120,6 +117,8 @@ protected:
 	/** 머즐 플래시 Vfx */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
 	UNiagaraSystem* MuzzleFlashVfx;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon")
+	FRotator MuzzleFlashAttachRotator;
 private:
 	/** 무기의 타입*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Category="Weapon")
