@@ -31,6 +31,13 @@ void ABombProjectile::OnOverlap(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 			for (AActor* Actor : OverlappingActors)
 			{
+				// 게임 인스턴스 캐스팅
+				UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+				UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+
+				// 받은 데미지 증가
+				MainGameInstance->AddReceivedDamageByEnemy(ProjectileDamage);
+				
 				if (Actor && Actor->ActorHasTag("Player"))
 				{
 					UGameplayStatics::ApplyDamage(

@@ -2,6 +2,7 @@
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 
 AMineItem::AMineItem()
 {
@@ -47,6 +48,13 @@ void AMineItem::Explode()
 
 	for (AActor* Actor : OverlappingActors)
 	{
+		// 게임 인스턴스 캐스팅
+		UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+		UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance);
+
+		// 받은 데미지 증가
+		MainGameInstance->AddReceivedDamageByEnemy(ExplosionDamage);
+		
 		if (Actor && Actor->ActorHasTag("Player"))
 		{
 			UGameplayStatics::ApplyDamage(
