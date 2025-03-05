@@ -55,6 +55,10 @@ public:
 	void AddReceivedDamageByEnemy(const int32 Amount);
 	/** 입힌 피해량 증가 */
 	void AddDealtDamageToEnemy(const int32 Amount);
+	/** 적중한 총알 수 증가 */
+	void AddHitProjectileCount(const int32 Amount);
+	/** 사망 횟수 */
+	void AddDeathCount(const int32 Amount);
 	/** 회피한 횟수 증가 */
 	void AddEvasionAttackCount(const int32 Amount);
 	/** 회피한 횟수 감소 */

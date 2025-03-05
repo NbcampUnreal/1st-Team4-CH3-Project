@@ -10,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -399,6 +400,11 @@ void APlayerCharacter::Die()
 	{
 		OnDeathMontageEnded();
 	}
+
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		MainGameInstance->AddDeathCount(1);
+	}
 }
 
 void APlayerCharacter::OnDeathMontageEnded()
@@ -610,6 +616,11 @@ float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const
 	if (Status.Shield < Status.MaxShield)
 	{
 		GetWorldTimerManager().SetTimer(ShieldRechargeTimerHandle, this, &APlayerCharacter::StartRechargeShield, ShieldRechargeDelay, false);
+	}
+
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		MainGameInstance->AddHitProjectileCount(1);
 	}
 	
 	if (Status.Health <= 0)

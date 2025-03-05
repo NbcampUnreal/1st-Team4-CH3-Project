@@ -62,6 +62,16 @@ void UMainGameInstance::AddDealtDamageToEnemy(const int32 Amount)
 	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("DealtDamageToEnemy : %d"),DealtDamageToEnemy));
 }
 
+void UMainGameInstance::AddHitProjectileCount(const int32 Amount)
+{
+	HitProjectileCount += Amount;
+}
+
+void UMainGameInstance::AddDeathCount(const int32 Amount)
+{
+	DeathCount += Amount;
+}
+
 // 구현
 void UMainGameInstance::AddEvasionAttackCount(const int32 Amount)
 {
