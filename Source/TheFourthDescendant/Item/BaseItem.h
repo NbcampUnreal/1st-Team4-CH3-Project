@@ -34,6 +34,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Effects")
 	USoundBase* PickupSound;
 
+	// 아이템 획득 시 스폰할 나이아가라 액터
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Effects")
+	TSubclassOf<AActor> NiagaraActor;
+	
 	// IItemInterface에서 요구하는 함수들을 반드시 구현
 	virtual void OnItemOverlap(
 			UPrimitiveComponent* OverlappedComp,
