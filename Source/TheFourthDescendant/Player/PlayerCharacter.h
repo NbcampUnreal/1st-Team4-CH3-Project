@@ -282,6 +282,10 @@ protected:
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* LandSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* DodgeSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	float DodgeSoundProbability;
 	
 private:
 	/** TPS 카메라 컴포넌트 */

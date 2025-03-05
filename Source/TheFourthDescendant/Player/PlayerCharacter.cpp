@@ -73,6 +73,8 @@ APlayerCharacter::APlayerCharacter()
 	MinFallSpeedForLandSound = 400.0f;
 	bShouldHandGrab = true;
 
+	DodgeSoundProbability = 0.5f;
+	
 	Tags.Add(TEXT("Player"));
 }
 
@@ -929,6 +931,10 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 	
 	bIsFullBodyActive = true;
 	SetDodgeInvincible(true);
+	if (DodgeSound && FMath::FRand() < DodgeSoundProbability)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, DodgeSound, GetActorLocation());
+	}
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
