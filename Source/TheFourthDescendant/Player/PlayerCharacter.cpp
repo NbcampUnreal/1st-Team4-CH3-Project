@@ -5,11 +5,14 @@
 
 #include "ShooterPlayerController.h"
 #include "EnhancedInputComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
@@ -78,6 +81,14 @@ APlayerCharacter::APlayerCharacter()
 	ReloadSoundProbability = 0.8f;
 	ReloadWordMinAmmo = 15;
 
+	bCanUseSkillC = true;
+	bIsUsingSkillC = false;
+	SkillCLength = 1500.0f;
+	SkillCUpdateInterval = 0.1f;
+	SkillCElapsedTime = 0.0f;
+	SkillCDamage = 10.0f;
+	SkillCAttackInterval = 0.1f;
+	
 	ShieldBrokenSoundCoolDown = 10.0f;
 	bCanPlayShieldBrokenSound = true;
 
@@ -259,6 +270,36 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 			        this,
 			        &APlayerCharacter::EquipWeaponSlot3
 			    );
+			}
+
+			if (PlayerController->ActivateSkillZAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillZAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillZ
+				);
+			}
+
+			if (PlayerController->ActivateSkillXAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillXAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillX
+				);
+			}
+
+			if (PlayerController->ActivateSkillCAction)
+			{
+				EnhancedInput->BindAction(
+					PlayerController->ActivateSkillCAction,
+					ETriggerEvent::Started,
+					this,
+					&APlayerCharacter::ActivateSkillC
+				);
 			}
 		}
 	}
@@ -568,6 +609,65 @@ void APlayerCharacter::AddAmmo(EAmmoType AmmoType, int Amount)
 }
 
 
+EPhysicalSurface APlayerCharacter::GetSurfaceTypeOnFoot()
+{
+	FHitResult LandHitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.bReturnPhysicalMaterial = true;
+	QueryParams.AddIgnoredActor(this);
+	FVector StartLocation = GetActorLocation() + FVector::UpVector * 10.0f;
+	FVector EndLocation = GetActorLocation() + FVector::DownVector * 100.0f;
+	if (GetWorld()->LineTraceSingleByChannel(LandHitResult, StartLocation, EndLocation, ECollisionChannel::ECC_Visibility, QueryParams))
+	{
+		return  UGameplayStatics::GetSurfaceType(LandHitResult);
+	}
+	return EPhysicalSurface::SurfaceType_Default;
+}
+
+USoundBase* APlayerCharacter::GetLandFootSound(const float Speed) const
+{
+	if (Speed < 250.f)
+	{
+		return  WalkFootStepSound;
+	}
+	if (Speed < 650.f)
+	{
+		return  RunFootStepSound;
+	}
+	if (Speed > 650.f)
+	{
+		return  SprintFootStepSound;
+	}
+	return nullptr;
+}
+
+USoundBase* APlayerCharacter::GetWaterFootSound(float Speed)
+{
+	if (Speed < 450.0f)
+	{
+		return WaterDragSound;
+	}
+	if (Speed <= 800.0f)
+	{
+		return WaterRunSound;
+	}
+	
+	return nullptr;
+}
+
+USoundBase* APlayerCharacter::GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface)
+{
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType_Default)
+	{
+		return GetLandFootSound(Speed);
+	}
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType1)
+	{
+		return  GetWaterFootSound(Speed);
+	}
+	return nullptr;
+}
+
 void APlayerCharacter::PlayFootStepSound()
 {
 	if (GetWorld()->GetTimeSeconds() - LastFootStepTime < FootStepInterval)
@@ -576,23 +676,10 @@ void APlayerCharacter::PlayFootStepSound()
 	}
 
 	LastFootStepTime = GetWorld()->GetTimeSeconds();
-	
-	const float Speed = GetVelocity().Size();
-	USoundBase* FootStepSound;
-	if (Speed < 250.f)
-	{
-		FootStepSound = WalkFootStepSound;
-	}
-	else if (Speed < 650.f)
-	{
-		FootStepSound = RunFootStepSound;
-	}
-	else
-	{
-		FootStepSound = SprintFootStepSound;
-	}
 
-	if (FootStepSound)
+	const float Speed = GetVelocity().Size();
+	EPhysicalSurface PhysicalSurface = GetSurfaceTypeOnFoot();
+	if (USoundBase* FootStepSound = GetFootStepSound(Speed, PhysicalSurface))
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FootStepSound, GetActorLocation());
 	}
@@ -629,6 +716,15 @@ void APlayerCharacter::PlayDamageSound()
 		bCanPlayDamageSound = false;
 		GetWorldTimerManager().SetTimer(DamageSoundTimerHandle, this, &APlayerCharacter::OnDamageSoundCoolDown, DamageSoundCoolDown, false);
 	}
+
+	// 다른 몽타주를 취소시키고 있어서 현재 기능을 사용하지 않도록 한다.
+	// if (HitMontage)
+	// {
+	// 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	// 	{
+	// 		AnimInstance->Montage_Play(HitMontage);
+	// 	}
+	// }
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -686,7 +782,8 @@ void APlayerCharacter::UpdateYawControl()
 	// 현재의 난관은 이동하면서 다른 동작이 가능해서 State를 명확하게 표현하기 어렵다는 점이고 Animation이나 다른 것에서 상태 전이를 해야 된다는 점이다.
 
 	// 이동 중이거나 실제 조준 중일 때는 회전
-	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive))
+	// 스킬 사용중이거나
+	if (bIsMoving || (bIsAiming && !bIsUpperBodyActive) || bIsUsingSkillC)
 	{
 		bUseControllerRotationYaw = true;
 	}
@@ -724,8 +821,8 @@ void APlayerCharacter::PlayLandSound()
 	// {
 	// 	LandSoundToPlay = LandSound;
 	// }
-	
-	if (LandSound)
+	EPhysicalSurface PhysicalSurface = GetSurfaceTypeOnFoot();
+	if (USoundBase* LandSound = GetLandSound(PhysicalSurface))
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation());
 	}
@@ -739,6 +836,19 @@ void APlayerCharacter::Landed(const FHitResult& Hit)
 	{
 		PlayLandSound();
 	}
+}
+
+USoundBase* APlayerCharacter::GetLandSound(EPhysicalSurface PhysicalSurface) const
+{
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType_Default)
+	{
+		return  GroundLandSound;
+	}
+	if (PhysicalSurface == EPhysicalSurface::SurfaceType1)
+	{
+		return  WaterLandSound;
+	}
+	return nullptr;
 }
 
 bool APlayerCharacter::CanFire() const
@@ -890,6 +1000,101 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 	}
 }
 
+void APlayerCharacter::OnSkillCCoolDown()
+{
+	bCanUseSkillC = true;
+}
+
+void APlayerCharacter::OnSkillCUpdate()
+{
+	SkillCElapsedTime += SkillCUpdateInterval;
+	SkillCAttackElapsedTime += SkillCUpdateInterval;
+
+	float Progress = SkillCElapsedTime / SkillCDuration;
+	UE_LOG(LogTemp, Display, TEXT("Skill C Progress : %f"), Progress);
+
+	// 공격 이펙트 재생
+	if (!SkillCParticleComponent && SkillCElapsedTime > 0.2f)
+	{
+		SkillCParticleComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(SkillCParticle,
+			GetMesh(),
+			TEXT("LHandWeaponSocket"),
+			FVector::ZeroVector,
+			FRotator(90.0f, 0.0f, 0.0f), // 모델이라 그런지 Pitch 90도가 Yaw 90도가 되는 것 같다.
+			EAttachLocation::SnapToTarget,
+			false
+		);
+	}
+
+	if (SkillCParticleComponent)
+	{
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		GetController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+		FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * SkillCLength;
+		FHitResult CameraHitResult;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+
+		FVector TargetEnd = CameraTraceEnd;
+		if (GetWorld()->LineTraceSingleByChannel(CameraHitResult, CameraLocation, CameraTraceEnd, ECollisionChannel::ECC_Pawn, QueryParams))
+		{
+			TargetEnd = CameraHitResult.ImpactPoint + CameraRotation.Vector() * 10.f;
+		}
+
+		FVector SocketLocation = GetMesh()->GetSocketLocation(TEXT("LHandWeaponSocket"));
+		FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(SocketLocation, TargetEnd);
+		SkillCParticleComponent->SetWorldRotation(LookAtRotation);
+
+		if (SkillCAttackElapsedTime > SkillCAttackInterval)
+		{
+			SkillCAttackElapsedTime -= SkillCAttackInterval;
+			TArray<FHitResult> AttackHitResults;
+			if (GetWorld()->LineTraceMultiByChannel(AttackHitResults, SocketLocation, TargetEnd, ECollisionChannel::ECC_Pawn, QueryParams))
+			{
+				for (FHitResult& HitResult : AttackHitResults)
+				{
+					if (AActor* HitActor = HitResult.GetActor();
+						HitActor && HitActor->IsA(ACharacterBase::StaticClass()))
+					{
+						FVector ShotDirection = (TargetEnd - SocketLocation).GetSafeNormal();
+                        				UGameplayStatics::ApplyPointDamage(HitActor, SkillCDamage, ShotDirection, HitResult, GetController(), this, UDamageType::StaticClass());
+					}
+				}
+			}
+		}
+	}
+	
+	if (SkillCElapsedTime >= SkillCDuration)
+	{
+		UE_LOG(LogTemp, Display, TEXT("Skill C End"));
+		bIsUpperBodyActive = false;
+		bIsUsingSkillC = false;
+		bShouldHandGrab = false;
+
+		SkillCParticleComponent->DeactivateImmediate();
+		SkillCParticleComponent = nullptr;
+		
+		CurrentWeapon->SetActorHiddenInGame(false);
+		
+		GetWorldTimerManager().ClearTimer(SkillCTimerHandle);
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Stop(0.0f, SkillCStartMontage);
+			AnimInstance->Montage_Play(SkillCEndMontage);
+		}
+
+		GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCCoolDown, SkillCCoolDown, false);
+	}
+}
+
+void APlayerCharacter::OnSkillCStartMontageEnded(UAnimMontage* AnimMontage, bool bInteruppted)
+{
+	SkillCElapsedTime = 0.0f;
+	GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCUpdate, SkillCUpdateInterval, true);
+}
+
 void APlayerCharacter::OnShieldBrokenSoundCoolDown()
 {
 	bCanPlayShieldBrokenSound = true;
@@ -928,7 +1133,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(ForwardVector, MoveInput.X);
 		
 		// 전방으로 이동할 경우에만 Sprint 속도를 적용
-		if (MoveInput.X > 0 && bIsSprinting)
+		if (MoveInput.X > 0 && bIsSprinting && !bIsAiming)
 		{
 			GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 		}
@@ -989,7 +1194,7 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 {
 	// 점프 중에는 회피를 할 수 없다.
 	if (GetMovementComponent()->IsFalling()) return;
-	if (bIsFullBodyActive || bIsDeath) return;;
+	if (bIsFullBodyActive || bIsDeath || bIsUsingSkillC) return;;
 	
 	bIsFullBodyActive = true;
 	SetDodgeInvincible(true);
@@ -1027,15 +1232,18 @@ void APlayerCharacter::Dodge(const FInputActionValue& Value)
 
 void APlayerCharacter::ToggleCrouch(const FInputActionValue& Value)
 {
-	bIsCrouching = !bIsCrouching;
-	if (bIsCrouching)
-	{
-		Crouch();
-	}
-	else
-	{
-		UnCrouch();
-	}
+	// UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	// AnimInstance->Montage_Play(HitMontage);
+	
+	// bIsCrouching = !bIsCrouching;
+	// if (bIsCrouching)
+	// {
+	// 	Crouch();
+	// }
+	// else
+	// {
+	// 	UnCrouch();
+	// }
 }
 
 void APlayerCharacter::Interaction(const FInputActionValue& Value)
@@ -1135,4 +1343,41 @@ void APlayerCharacter::EquipWeaponSlot3(const FInputActionValue& InputActionValu
 {
 	if (!Controller || bIsDeath) return;
 	EquipWeaponByIndex(2);
+}
+
+void APlayerCharacter::ActivateSkillZ(const FInputActionValue& InputActionValue)
+{
+}
+
+void APlayerCharacter::ActivateSkillX(const FInputActionValue& InputActionValue)
+{
+}
+
+void APlayerCharacter::ActivateSkillC(const FInputActionValue& InputActionValue)
+{
+	if (!Controller || bIsDeath) return;
+	if (!bCanUseSkillC || bIsFullBodyActive) return;
+
+	bIsUpperBodyActive = true;
+	bCanUseSkillC = false;
+	bIsUsingSkillC = true;
+	bShouldHandGrab = false;
+
+	CurrentWeapon->SetActorHiddenInGame(true);
+
+	SkillCElapsedTime = 0.0f;
+	SkillCAttackElapsedTime = 0.0f;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && SkillCStartMontage)
+	{
+		AnimInstance->Montage_Play(SkillCStartMontage);
+
+		GetWorldTimerManager().SetTimer(SkillCTimerHandle, this, &APlayerCharacter::OnSkillCUpdate, SkillCUpdateInterval, true);
+	}
+
+	if (SkillCSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SkillCSound, GetActorLocation());
+	}
 }

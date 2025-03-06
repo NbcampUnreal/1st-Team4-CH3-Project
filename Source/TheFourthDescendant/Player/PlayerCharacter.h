@@ -108,7 +108,7 @@ public:
 
 	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
-	bool bIsOnAttackAnimState; 
+	bool bIsOnAttackAnimState;
 protected:
 	// FStateMachineContext StateMachineContext;
 	FTimerHandle DeathMontageTimerHandle;
@@ -259,6 +259,38 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Animation")
 	TMap<EWeaponType, UAnimMontage*> DeathMontages;
 
+	// SkillC
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	UAnimMontage* SkillCStartMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	UAnimMontage* SkillCEndMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCCoolDown;
+	FTimerHandle SkillCTimerHandle;
+	bool bCanUseSkillC;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillRange;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCUpdateInterval;
+	float SkillCElapsedTime;
+	float SkillCAttackElapsedTime;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCAttackInterval;
+	bool bIsUsingSkillC;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Player|Skill")
+	float SkillCLength;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	class UNiagaraSystem* SkillCParticle;
+	UPROPERTY()
+	class UNiagaraComponent* SkillCParticleComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	float SkillCDamage;
+
+	
 	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	float FootStepInterval;
@@ -279,9 +311,17 @@ protected:
 	/** 질주 발소리 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* SprintFootStepSound;
+	/** 수면 걷기 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	USoundBase* WaterDragSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WaterRunSound;
 	/** 착지 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
-	class USoundBase* LandSound;
+	class USoundBase* GroundLandSound;
+	/** 수면 착지 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* WaterLandSound;
 	/** 구르기 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
 	class USoundBase* DodgeSound;
@@ -323,6 +363,8 @@ protected:
 	float DamageSoundCoolDown;
 	FTimerHandle DamageSoundTimerHandle;
 	bool bCanPlayDamageSound;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
+	class USoundBase* SkillCSound;
 private:
 	/** TPS 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere)
@@ -372,6 +414,10 @@ public:
 	/** 실제 실드량을 회복시키는 함수 */
 	void RechargeShield();
 
+	/** 피격 시 재생할 몽타주 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Status")
+	UAnimMontage* HitMontage;
+	
 	/** 무기 인벤토리를 초기 무기로 초기화한다.*/
 	void InitWeaponInventory();
 	/** I번째 무기 슬롯의 무기를 장착한다.*/
@@ -393,10 +439,14 @@ public:
 	/** 탄약 추가 */
 	UFUNCTION(BlueprintCallable)
 	void AddAmmo(EAmmoType AmmoType, int Amount);
+	EPhysicalSurface GetSurfaceTypeOnFoot();
+	USoundBase* GetLandFootSound(float Speed) const;
 	/** 탄약의 총 개수를 반환 */
 	UFUNCTION(BlueprintPure, Category = "Player|Weapon")
 	int GetTotalAmmo(EAmmoType AmmoType) const { return AmmoInventory[AmmoType]; }
 
+	USoundBase* GetWaterFootSound(float Speed);
+	USoundBase* GetFootStepSound(float Speed, EPhysicalSurface PhysicalSurface);
 	/** 발소리 재생, 너무 빠르게 연속으로 재생하지는 않는다. AnimNotify로 BP로 실행 중 */
 	UFUNCTION(BlueprintCallable)
 	void PlayFootStepSound();
@@ -418,6 +468,7 @@ protected:
 	void UpdateCameraArmLength(float DeltaSeconds);
 	/** 캐릭터가 착지했을 때 호출되는 함수 */
 	virtual void Landed(const FHitResult& Hit) override;
+	USoundBase* GetLandSound(EPhysicalSurface PhysicalSurface) const;
 	/** 착지 소리 재생, 착지 속력에 따라 소리를 재생한다. */
 	void PlayLandSound();
 	/** 사격 가능 여부를 확인*/
@@ -442,6 +493,10 @@ protected:
 	UFUNCTION()
 	void OnReloadMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void OnSkillCCoolDown();
+	void OnSkillCUpdate();
+	void OnSkillCStartMontageEnded(UAnimMontage* AnimMontage, bool bInteruppted);
+	
 	void OnShieldBrokenSoundCoolDown();
 	void PlayShieldBrokenSound();
 	
@@ -497,4 +552,10 @@ protected:
 	void EquipWeaponSlot2(const FInputActionValue& InputActionValue);
 	UFUNCTION()
 	void EquipWeaponSlot3(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillZ(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillX(const FInputActionValue& InputActionValue);
+	UFUNCTION()
+	void ActivateSkillC(const FInputActionValue& InputActionValue);
 };
