@@ -13,6 +13,8 @@ struct FStatus
 {
 	GENERATED_BODY()
 
+	FStatus();
+	
 	/** 캐릭터의 현재 체력 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 Health;
