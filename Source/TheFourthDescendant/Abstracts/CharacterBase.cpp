@@ -3,10 +3,22 @@
 
 #include "CharacterBase.h"
 
+FStatus::FStatus()
+{
+	MaxHealth = 0;
+	Health = MaxHealth;
+	MaxShield = 0;
+	Shield = MaxShield;
+	Defense = 0.0f;
+	WalkSpeed = 0.0f;
+}
+
 // Sets default values
 ACharacterBase::ACharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	Status = FStatus();
 }
 
 int32 ACharacterBase::GetHealth() const
