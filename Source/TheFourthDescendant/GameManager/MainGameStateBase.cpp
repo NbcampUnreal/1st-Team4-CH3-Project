@@ -3,6 +3,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TheFourthDescendant/Gimmic/MonsterSpawner.h"
 #include "TheFourthDescendant/Monster/Monster.h"
+#include "TheFourthDescendant/Player/ShooterPlayerController.h"
 
 AMainGameStateBase::AMainGameStateBase()
 {
@@ -134,7 +135,7 @@ void AMainGameStateBase::OnBossLevelEnded()
 		LevelLoadTimer,
 		[this]()
 		{
-			UGameplayStatics::OpenLevel(GetWorld(), LevelNames[0]);
+			OnBossDead.Broadcast(true);
 		},
 		LevelInterval[1],
 		false
