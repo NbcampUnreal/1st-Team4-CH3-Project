@@ -83,7 +83,7 @@ APlayerCharacter::APlayerCharacter()
 
 	bCanUseSkillC = true;
 	bIsUsingSkillC = false;
-	SkillCLength = 1500.0f;
+	SkillCRange = 1500.0f;
 	SkillCUpdateInterval = 0.1f;
 	SkillCElapsedTime = 0.0f;
 	SkillCDamage = 10.0f;
@@ -1003,17 +1003,22 @@ void APlayerCharacter::OnReloadMontageEnded(UAnimMontage* Montage, bool bInterru
 void APlayerCharacter::OnSkillCCoolDown()
 {
 	bCanUseSkillC = true;
+
+	// Skill Icon 활성화
+	OnSkillCoolDownStateChanged.Broadcast(bCanUseSkillC); // true
 }
 
+// Update Loop for Skill C
 void APlayerCharacter::OnSkillCUpdate()
 {
 	SkillCElapsedTime += SkillCUpdateInterval;
 	SkillCAttackElapsedTime += SkillCUpdateInterval;
 
 	float Progress = SkillCElapsedTime / SkillCDuration;
-	UE_LOG(LogTemp, Display, TEXT("Skill C Progress : %f"), Progress);
+	// Update Skill Progress Bar
+	OnSkillProgressChanged.Broadcast(Progress);
 
-	// 공격 이펙트 재생
+	// 공격 이펙트 생성
 	if (!SkillCParticleComponent && SkillCElapsedTime > 0.2f)
 	{
 		SkillCParticleComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(SkillCParticle,
@@ -1032,7 +1037,7 @@ void APlayerCharacter::OnSkillCUpdate()
 		FRotator CameraRotation;
 		GetController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-		FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * SkillCLength;
+		FVector CameraTraceEnd = CameraLocation + CameraRotation.Vector() * SkillCRange;
 		FHitResult CameraHitResult;
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(this);
@@ -1065,10 +1070,10 @@ void APlayerCharacter::OnSkillCUpdate()
 			}
 		}
 	}
-	
+
+	// 스킬 종료
 	if (SkillCElapsedTime >= SkillCDuration)
 	{
-		UE_LOG(LogTemp, Display, TEXT("Skill C End"));
 		bIsUpperBodyActive = false;
 		bIsUsingSkillC = false;
 		bShouldHandGrab = false;
@@ -1077,6 +1082,9 @@ void APlayerCharacter::OnSkillCUpdate()
 		SkillCParticleComponent = nullptr;
 		
 		CurrentWeapon->SetActorHiddenInGame(false);
+
+		// SKill C Progress Bar 비활성화
+		OnSkillActivated.Broadcast(false);
 		
 		GetWorldTimerManager().ClearTimer(SkillCTimerHandle);
 		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
@@ -1367,6 +1375,11 @@ void APlayerCharacter::ActivateSkillC(const FInputActionValue& InputActionValue)
 
 	SkillCElapsedTime = 0.0f;
 	SkillCAttackElapsedTime = 0.0f;
+	
+	// 스킬 Progress Bar On
+	OnSkillActivated.Broadcast(true);
+	// 스킬 쿨타임 UI Off
+	OnSkillCoolDownStateChanged.Broadcast(bCanUseSkillC); // false
 	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && SkillCStartMontage)
