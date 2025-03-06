@@ -14,6 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -746,6 +747,25 @@ void APlayerCharacter::BeginPlay()
 
 	PrevShield = Status.Shield;
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+	
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		if (MainGameInstance->bHasPlayerSaved)
+		{
+			DeserializeCharacterData(MainGameInstance->CharacterSaveData);
+		}
+	}
+
+	if (AMainGameStateBase* MainGameState = GetWorld()->GetGameState<AMainGameStateBase>())
+	{
+		MainGameState->LevelEnded.AddLambda([this]()
+		{
+			if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+			{
+				MainGameInstance->SaveCharacterData(SerializeCharacterData());
+			}
+		});
+	}
 }
 
 void APlayerCharacter::OnDamageSoundCoolDown()
