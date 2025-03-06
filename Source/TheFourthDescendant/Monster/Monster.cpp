@@ -144,6 +144,7 @@ FItemSpawnRow* AMonster::GetRandomItem() const
 
 void AMonster::OnDeath()
 {
+	if (bIsDead) return;
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
 
 	// 체력 0으로 초기화 및 콜리전 비활성화
@@ -154,6 +155,11 @@ void AMonster::OnDeath()
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
 
+	// AI 작동 중지
+	if (EnemyController != nullptr)
+	{
+		EnemyController->StopMovement();
+	}
 	SpawnRandomItem();
 	
 	// 죽인 적 수 반영

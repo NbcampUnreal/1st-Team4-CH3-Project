@@ -120,7 +120,7 @@ float ABoss::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEve
 		FHitResult HitResult = PointDamage->HitInfo;
 		FName RegionName = *HitResult.PhysicsObjectOwner->GetName();
 		HandleDamageToPart(RegionName, DamageAmount);
-		HandleDamageToKneeItem(RegionName);
+		HandleDamageToKneeItem(RegionName, DamageAmount);
 
 		// 충돌 결과 전파
 		OnHitInfo.Broadcast(HitResult, DamageAmount);		
@@ -501,6 +501,7 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 		}
 		else
 		{
+			Damage += RegionDamage;
 			++RegionAttackCount[PartsName];
 			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Damaged: %s, Count : %d"), *PartsName.ToString(), RegionAttackCount[PartsName]));
 
@@ -513,7 +514,7 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 	
 }
 
-void ABoss::HandleDamageToKneeItem(FName PartsName)
+void ABoss::HandleDamageToKneeItem(FName PartsName, float& Damage)
 {
 	if (!KneeItemNames.Contains(PartsName))
 	{
@@ -529,10 +530,12 @@ void ABoss::HandleDamageToKneeItem(FName PartsName)
 		if (RegionAttackCount[PartsName] >= KneeitemDestroyCount)
 		{
 			DestroyRegion(PartsName);
+			Damage += RegionDestroyDamage / 2;
 			++KneeItemDestroyedCount;
 		}
 		else
 		{
+			Damage += RegionDamage * 2;
 			++RegionAttackCount[PartsName];	
 		}
 	}
