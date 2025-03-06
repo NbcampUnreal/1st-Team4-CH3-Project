@@ -105,6 +105,18 @@ public:
 	/** 사망 몽타주가 종료되었을 때 호출되는 이벤트 */
 	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
 	FOnPlayerCompleteDeath OnPlayerCompleteDeath;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillCooldownChanged, float , Progress);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	/** 스킬 사용 중 Update 루프에서 진행도와 함께 호출 */
+	FOnSkillCooldownChanged OnSkillProgressChanged;
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillStart, bool, bIsSkillStart);
+	/** 스킬이 활성화되고 비활성화 될 때 호출 */
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnSkillStart OnSkillActivated;
+	/** 스킬이 사용 가능하고 사용 가능하지 않게 변할 떄 호출 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillActivate, bool, bIsSkillReady);
+	UPROPERTY(BlueprintAssignable, Category = "Player|Events")
+	FOnSkillActivate OnSkillCoolDownStateChanged;
 
 	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
@@ -260,36 +272,45 @@ protected:
 	TMap<EWeaponType, UAnimMontage*> DeathMontages;
 
 	// SkillC
+	/** SKillC 시작 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	UAnimMontage* SkillCStartMontage;
+	/** SkillC 종료 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	UAnimMontage* SkillCEndMontage;
+	/** SkillC 지속 시간 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	float SkillCDuration;
+	/** SkillC 쿨다운 시간 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	float SkillCCoolDown;
+	/** SkillC 쿨다운 타이머 */
 	FTimerHandle SkillCTimerHandle;
+	/** SkillC 사용 가능 여부 */
 	bool bCanUseSkillC;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
-	float SkillDamage;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
-	float SkillRange;
+	/** SkillC Update 주기 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	float SkillCUpdateInterval;
+	/** SkillC 동안 지난 시간*/
 	float SkillCElapsedTime;
+	/** SkillC 동안 공격 관련 시간 */
 	float SkillCAttackElapsedTime;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	/** SkillC 타격 간격 */
 	float SkillCAttackInterval;
+	/** SkillC 사용 중인지 여부 */
 	bool bIsUsingSkillC;
+	/** SkillC 공격 끝났을 때 호출되는 함수 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Player|Skill")
-	float SkillCLength;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
-	class UNiagaraSystem* SkillCParticle;
-	UPROPERTY()
-	class UNiagaraComponent* SkillCParticleComponent;
+	float SkillCRange;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
 	float SkillCDamage;
-
+	/** SkillC 파티클 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Skill")
+	class UNiagaraSystem* SkillCParticle;
+	/** SkillC 파티클 컴포넌트 */
+	UPROPERTY()
+	class UNiagaraComponent* SkillCParticleComponent;
 	
 	/** 최소 발소리 재생 간격, 다리 움직임이 블렌드되면서 빠르게 여러번 재생 되는 현상을 방지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Sound")
