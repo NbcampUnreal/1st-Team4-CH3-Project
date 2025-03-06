@@ -154,6 +154,11 @@ void AMonster::OnDeath()
 	bIsDead = true;
 	Blackboard->SetValueAsBool(FName("IsDead"), true);
 
+	// AI 작동 중지
+	if (EnemyController != nullptr)
+	{
+		EnemyController->StopMovement();
+	}
 	SpawnRandomItem();
 	
 	// 죽인 적 수 반영
