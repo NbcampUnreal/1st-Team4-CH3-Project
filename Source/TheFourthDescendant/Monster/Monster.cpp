@@ -144,6 +144,7 @@ FItemSpawnRow* AMonster::GetRandomItem() const
 
 void AMonster::OnDeath()
 {
+	if (bIsDead) return;
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Monster OnDeath");
 
 	// 체력 0으로 초기화 및 콜리전 비활성화
