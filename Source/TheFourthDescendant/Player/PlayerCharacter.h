@@ -62,6 +62,16 @@ struct FDurableChangeInfo
 	float Shield;
 };
 
+USTRUCT(BlueprintType)
+struct FCharacterSaveData
+{
+	GENERATED_BODY()
+
+	int32 Health;
+	TArray<int32> AmmoInventory;
+	TArray<int32> WeaponAmmoInventory;
+};
+
 /**
  * 플레이어 캐릭터 클래스
  * 캐릭터는 다음과 같은 상태를 가진다.
@@ -121,10 +131,13 @@ public:
 	/** 장전 애니메이션 재생 여부, ABP에서 값을 전달 받는다.*/
 	UPROPERTY(BlueprintReadWrite, Category = "Player|Animation")
 	bool bIsOnAttackAnimState;
+
+	FCharacterSaveData SerializeCharacterData();
+	void DeserializeCharacterData(const FCharacterSaveData& Data);
 protected:
 	// FStateMachineContext StateMachineContext;
 	FTimerHandle DeathMontageTimerHandle;
-
+	
 	/** 무적 상태 여부 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Player|Status")
 	bool bInvincible;

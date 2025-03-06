@@ -13,6 +13,8 @@ UMainGameInstance::UMainGameInstance()
 	HitProjectileCount = 0;
 	DeathCount = 0;
 	EvasionAttackCount = 0;
+	bHasPlayerSaved = false;
+	CharacterSaveData = FCharacterSaveData();
 }
 
 void UMainGameInstance::Init()
@@ -33,6 +35,8 @@ void UMainGameInstance::ResetValue()
 	HitProjectileCount = 0;
 	DeathCount = 0;
 	EvasionAttackCount = 0;
+	bHasPlayerSaved = false;
+	CharacterSaveData = FCharacterSaveData();
 }
 
 // 구현
@@ -84,6 +88,12 @@ void UMainGameInstance::SubtractEvasionAttackCount(const int32 Amount)
 {
 	EvasionAttackCount -= Amount;
 	//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::Printf(TEXT("EvasionAttackCount : %d"),EvasionAttackCount));
+}
+
+void UMainGameInstance::SaveCharacterData(FCharacterSaveData NewCharacterData)
+{
+	bHasPlayerSaved = true;
+	CharacterSaveData = NewCharacterData;
 }
 
 void UMainGameInstance::AddPlayTimeOneSecond()

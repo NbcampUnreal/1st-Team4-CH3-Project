@@ -39,6 +39,12 @@ AWeaponBase::AWeaponBase()
 	MuzzleFlashAttachRotator = FRotator::ZeroRotator;
 }
 
+void AWeaponBase::SetCurrentAmmo(int NewAmmo)
+{
+	CurrentAmmo = NewAmmo;
+	OnAmmoChanged.Broadcast(CurrentAmmo);
+}
+
 void AWeaponBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);

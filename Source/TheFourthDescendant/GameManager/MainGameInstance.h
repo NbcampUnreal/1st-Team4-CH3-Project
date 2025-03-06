@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "TheFourthDescendant/Player/PlayerCharacter.h"
 #include "MainGameInstance.generated.h"
 
 UCLASS()
@@ -42,6 +43,8 @@ public:
 	/** 플레이 타임 체크용 타이머 핸들 */
 	FTimerHandle PlayTimeTimer;
 
+	bool bHasPlayerSaved;
+	FCharacterSaveData CharacterSaveData;
 public:
 	virtual void Init();
 	/** 전역 변수 초기화 함수 */
@@ -64,6 +67,7 @@ public:
 	/** 회피한 횟수 감소 */
 	void SubtractEvasionAttackCount(const int32 Amount);
 
+	void SaveCharacterData(FCharacterSaveData NewCharacterData);
 private:
 	/** 1초마다 플레이 타임 1초 증가 */
 	void AddPlayTimeOneSecond();

@@ -14,6 +14,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "TheFourthDescendant/GameManager/MainGameInstance.h"
+#include "TheFourthDescendant/GameManager/MainGameStateBase.h"
 #include "TheFourthDescendant/Weapon/WeaponBase.h"
 
 const FName APlayerCharacter::LWeaponSocketName(TEXT("LHandWeaponSocket"));
@@ -97,6 +98,49 @@ APlayerCharacter::APlayerCharacter()
 	bCanPlayDamageSound = true;
 	
 	Tags.Add(TEXT("Player"));
+}
+
+FCharacterSaveData APlayerCharacter::SerializeCharacterData()
+{
+	FCharacterSaveData Data;
+
+	Data.Health = Status.Health;
+	for (const EAmmoType AmmoType : TEnumRange<EAmmoType>())
+	{
+		Data.AmmoInventory.Add(AmmoInventory[AmmoType]);
+	}
+	for (AWeaponBase* Weapon : WeaponSlots)
+	{
+		if (Weapon)
+		{
+			Data.WeaponAmmoInventory.Add(Weapon->GetCurrentAmmo());
+		}
+	}
+
+	return Data;
+}
+
+// Pre Condition : InitInventory, InitWeaponSlot이 호출되어서 이미 초기화가 진행된 상태이어야 한다.
+void APlayerCharacter::DeserializeCharacterData(const FCharacterSaveData& Data)
+{
+	Status.Health = Data.Health;
+	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+
+	// AddAmmo와 동일 로직, 추후 개선 고려
+	for (const EAmmoType AmmoType : TEnumRange<EAmmoType>())
+	{
+		AmmoInventory[AmmoType] = Data.AmmoInventory[static_cast<int32>(AmmoType)];
+		OnTotalAmmoChanged.Broadcast(AmmoType, AmmoInventory[AmmoType]);
+	}
+
+	// Equip으로 이미 Binding된 것을 가정한다.
+	for (int i = 0; i < Data.WeaponAmmoInventory.Num(); ++i)
+	{
+		if (WeaponSlots.IsValidIndex(i) && WeaponSlots[i])
+		{
+			WeaponSlots[i]->SetCurrentAmmo(Data.WeaponAmmoInventory[i]);
+		}
+	}
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -689,6 +733,8 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter BeginPlay"));
+	
 	GetCharacterMovement()->MaxWalkSpeed = Status.WalkSpeed;
 	SpringArmComponent->TargetArmLength = NormalSpringArmLength;
 
@@ -701,6 +747,25 @@ void APlayerCharacter::BeginPlay()
 
 	PrevShield = Status.Shield;
 	OnHealthAndShieldChanged.Broadcast(FDurableChangeInfo(Status));
+	
+	if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+	{
+		if (MainGameInstance->bHasPlayerSaved)
+		{
+			DeserializeCharacterData(MainGameInstance->CharacterSaveData);
+		}
+	}
+
+	if (AMainGameStateBase* MainGameState = GetWorld()->GetGameState<AMainGameStateBase>())
+	{
+		MainGameState->LevelEnded.AddLambda([this]()
+		{
+			if (UMainGameInstance* MainGameInstance = GetGameInstance<UMainGameInstance>())
+			{
+				MainGameInstance->SaveCharacterData(SerializeCharacterData());
+			}
+		});
+	}
 }
 
 void APlayerCharacter::OnDamageSoundCoolDown()
