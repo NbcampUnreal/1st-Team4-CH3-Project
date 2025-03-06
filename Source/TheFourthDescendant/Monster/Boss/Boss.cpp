@@ -501,6 +501,7 @@ void ABoss::HandleDamageToPart(FName PartsName, float& Damage)
 		}
 		else
 		{
+			Damage += RegionDamage;
 			++RegionAttackCount[PartsName];
 			GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Damaged: %s, Count : %d"), *PartsName.ToString(), RegionAttackCount[PartsName]));
 

@@ -121,6 +121,9 @@ protected:
 	/** 부위 파괴 시 적용할 추가 데미지 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
 	int32 RegionDestroyDamage;
+	/** 부위 공격시 적용할 추가 데미지 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Region")
+	int32 RegionDamage;
 	/** Javelin 발사 사운드*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pattern|Sound")
 	class USoundCue* JavelinSound;
