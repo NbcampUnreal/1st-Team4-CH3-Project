@@ -45,7 +45,11 @@ public:
 	/** 레벨 전환 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Level")
 	TArray<float> LevelInterval;
-	
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBossDead, bool, bBossDead);
+	/** 보스가 죽었을 때 타이머 종료에 의해 호출되는 이벤트 */
+	UPROPERTY(BlueprintAssignable, Category = "Level")
+	FOnBossDead OnBossDead;
 
 private:
 	/** 스포너에 사용할 타이머 핸들러 */
